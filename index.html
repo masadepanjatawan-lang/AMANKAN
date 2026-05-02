@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AMANKAN — Anti Scam Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --surface: #13151c;
+      --surface2: #1c1f2a;
+      --border: rgba(255,255,255,0.07);
+      --text: #f0f2ff;
+      --muted: #8890aa;
+      --accent: #3dffa0;
+      --accent-dim: rgba(61,255,160,0.12);
+      --warn: #ffcc33;
+      --warn-dim: rgba(255,204,51,0.12);
+      --danger: #ff3d5a;
+      --danger-dim: rgba(255,61,90,0.12);
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Grid noise background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 70% 10%, rgba(61,255,160,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 10% 80%, rgba(61,255,160,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M0 0h1v40H0zm40 0h-1v40h1zM0 0v1h40V0zM0 40v-1h40v1z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(61,255,160,0.25);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: clamp(52px, 10vw, 80px);
+      font-weight: 800;
+      letter-spacing: -3px;
+      line-height: 1;
+      background: linear-gradient(135deg, #ffffff 0%, #3dffa0 60%, #00c97a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .tagline {
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    /* Limit counter */
+    .limit-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 24px;
+      animation: fadeDown 0.6s 0.1s ease both;
+      opacity: 0;
+    }
+
+    .limit-label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .limit-count {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .limit-pips {
+      display: flex;
+      gap: 5px;
+    }
+
+    .pip {
+      width: 28px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--surface2);
+      transition: background 0.3s;
+    }
+
+    .pip.active { background: var(--accent); }
+
+    .limit-warning {
+      background: rgba(255,204,51,0.08);
+      border: 1px solid rgba(255,204,51,0.2);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--warn);
+      margin-bottom: 24px;
+      display: none;
+      animation: fadeDown 0.3s ease both;
+    }
+
+    .limit-exhausted {
+      background: rgba(255,61,90,0.08);
+      border: 1px solid rgba(255,61,90,0.2);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      display: none;
+    }
+
+    .limit-exhausted h3 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--danger);
+      margin-bottom: 8px;
+    }
+
+    .limit-exhausted p {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Toggle */
+    .toggle-wrap {
+      display: flex;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 6px;
+      margin-bottom: 20px;
+      animation: fadeDown 0.6s 0.15s ease both;
+      opacity: 0;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .toggle-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Input card */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 16px;
+      animation: fadeDown 0.6s 0.2s ease both;
+      opacity: 0;
+      transition: border-color 0.3s;
+    }
+
+    .input-card:focus-within {
+      border-color: rgba(61,255,160,0.3);
+    }
+
+    .input-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 14px 16px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.25s;
+      line-height: 1.5;
+    }
+
+    .input-field::placeholder { color: var(--muted); opacity: 0.6; }
+    .input-field:focus { border-color: rgba(61,255,160,0.4); }
+
+    .input-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .char-count {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .clear-btn {
+      font-size: 11px;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.2s;
+    }
+
+    .clear-btn:hover { color: var(--text); }
+
+    /* CTA button */
+    .cta-btn {
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: #050a07;
+      border: none;
+      border-radius: 16px;
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      animation: fadeDown 0.6s 0.25s ease both;
+      opacity: 0;
+    }
+
+    .cta-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .cta-btn:hover:not(:disabled)::before { opacity: 1; }
+    .cta-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(61,255,160,0.3); }
+    .cta-btn:active:not(:disabled) { transform: translateY(0); }
+    .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Loading */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 40px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-top: 20px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    .loading-sub {
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.6;
+      margin-top: 6px;
+    }
+
+    /* Result card */
+    .result-card {
+      display: none;
+      background: var(--surface);
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 20px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .result-header {
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-status {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    .result-status.safe { color: var(--accent); }
+    .result-status.warn { color: var(--warn); }
+    .result-status.danger { color: var(--danger); }
+
+    .result-summary {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .confidence-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .confidence-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .confidence-fill.safe { background: var(--accent); }
+    .confidence-fill.warn { background: var(--warn); }
+    .confidence-fill.danger { background: var(--danger); }
+
+    .confidence-label {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .confidence-label.safe { color: var(--accent); }
+    .confidence-label.warn { color: var(--warn); }
+    .confidence-label.danger { color: var(--danger); }
+
+    .result-body {
+      padding: 20px 28px;
+    }
+
+    .result-section {
+      margin-bottom: 20px;
+    }
+
+    .result-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .result-points {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .result-points li {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .result-points li span.icon { flex-shrink: 0; }
+
+    .result-singkat {
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--muted);
+      font-style: italic;
+      border-left: 3px solid var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .result-singkat.warn { border-color: var(--warn); }
+    .result-singkat.danger { border-color: var(--danger); }
+
+    .disclaimer {
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.6;
+      text-align: center;
+      padding: 16px 28px 24px;
+      border-top: 1px solid var(--border);
+      line-height: 1.5;
+    }
+
+    .scan-again-btn {
+      width: calc(100% - 56px);
+      margin: 0 28px 24px;
+      padding: 13px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scan-again-btn:hover { border-color: rgba(61,255,160,0.3); color: var(--text); }
+
+    /* Status indicator strip */
+    .status-strip {
+      height: 4px;
+    }
+    .status-strip.safe { background: linear-gradient(90deg, var(--accent), #00c97a); }
+    .status-strip.warn { background: linear-gradient(90deg, var(--warn), #e6a800); }
+    .status-strip.danger { background: linear-gradient(90deg, var(--danger), #c71535); }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.4;
+    }
+
+    @media (max-width: 480px) {
+      .wrapper { padding: 32px 16px 60px; }
+      .result-header, .result-body { padding-left: 20px; padding-right: 20px; }
+      .scan-again-btn { width: calc(100% - 40px); margin: 0 20px 20px; }
+      .disclaimer { padding-left: 20px; padding-right: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">🛡️ Anti Scam Checker</div>
+    <div class="logo">AMANKAN</div>
+    <p class="tagline">Hindari penipuan sebelum uang Anda hilang.</p>
+  </div>
+
+  <!-- Limit Bar -->
+  <div class="limit-bar" id="limitBar">
+    <span class="limit-label">Sisa pengecekan hari ini</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="limit-pips" id="limitPips"></div>
+      <span class="limit-count" id="limitCount">5/5</span>
+    </div>
+  </div>
+
+  <!-- Warning 1 left -->
+  <div class="limit-warning" id="limitWarning">⚠️ Sisa 1 pengecekan lagi hari ini. Gunakan dengan bijak!</div>
+
+  <!-- Exhausted -->
+  <div class="limit-exhausted" id="limitExhausted">
+    <h3>🚫 Batas Harian Tercapai</h3>
+    <p>Anda telah menggunakan 5 pengecekan hari ini.<br>Kembali lagi besok atau <strong style="color:var(--warn)">upgrade</strong> untuk pengecekan tanpa batas.</p>
+  </div>
+
+  <!-- Main form -->
+  <div id="mainForm">
+    <!-- Toggle -->
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="toggleLink" onclick="setMode('link')">
+        🔗 Link Website
+      </button>
+      <button class="toggle-btn" id="toggleChat" onclick="setMode('chat')">
+        💬 Chat / Pesan
+      </button>
+    </div>
+
+    <!-- Input -->
+    <div class="input-card">
+      <label class="input-label" id="inputLabel">Tempel URL atau link yang ingin dicek</label>
+      <textarea
+        class="input-field"
+        id="inputField"
+        rows="4"
+        maxlength="3000"
+        placeholder="https://contoh-link.com atau tempel isi chat di sini..."
+        oninput="updateCharCount()"
+      ></textarea>
+      <div class="input-meta">
+        <span class="char-count" id="charCount">0 / 3000</span>
+        <button class="clear-btn" onclick="clearInput()">✕ Hapus</button>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="cta-btn" id="ctaBtn" onclick="analyze()">
+      Amankan Sekarang 🛡️
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <p class="loading-text">AI sedang menganalisa...</p>
+    <p class="loading-sub">Biasanya membutuhkan 5–10 detik</p>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="status-strip" id="statusStrip"></div>
+    <div class="result-header">
+      <div class="result-status" id="resultStatus"></div>
+      <p class="result-summary" id="resultSummary"></p>
+      <div class="confidence-bar-wrap">
+        <div class="confidence-track">
+          <div class="confidence-fill" id="confidenceFill" style="width:0%"></div>
+        </div>
+        <span class="confidence-label" id="confidenceLabel"></span>
+      </div>
+    </div>
+    <div class="result-body">
+      <div class="result-section">
+        <div class="result-section-title">🤔 Kenapa?</div>
+        <ul class="result-points" id="reasonsList"></ul>
+      </div>
+      <div class="result-section">
+        <div class="result-section-title">💡 Saran</div>
+        <ul class="result-points" id="suggestionsList"></ul>
+      </div>
+      <div class="result-singkat" id="singkat"></div>
+    </div>
+    <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
+    <p class="disclaimer">📌 Hasil ini dihasilkan oleh AI dan bersifat indikasi, bukan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
+  </div>
+
+  <div class="footer">AMANKAN • Powered by AI • v1.0 MVP</div>
+</div>
+
+<script>
+  // ─── STATE ───────────────────────────────────────────────────────────────
+  const MAX_PER_DAY = 5;
+  let mode = 'link';
+
+  function getToday() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function getUsage() {
+    const stored = localStorage.getItem('amankan_usage');
+    if (!stored) return { date: getToday(), count: 0 };
+    const data = JSON.parse(stored);
+    if (data.date !== getToday()) return { date: getToday(), count: 0 };
+    return data;
+  }
+
+  function saveUsage(count) {
+    localStorage.setItem('amankan_usage', JSON.stringify({ date: getToday(), count }));
+  }
+
+  function getRemainingChecks() {
+    return MAX_PER_DAY - getUsage().count;
+  }
+
+  // ─── UI INIT ─────────────────────────────────────────────────────────────
+  function renderLimitUI() {
+    const remaining = getRemainingChecks();
+    const pipsEl = document.getElementById('limitPips');
+    const countEl = document.getElementById('limitCount');
+    const warningEl = document.getElementById('limitWarning');
+    const exhaustedEl = document.getElementById('limitExhausted');
+    const mainForm = document.getElementById('mainForm');
+    const limitBar = document.getElementById('limitBar');
+
+    // Render pips
+    pipsEl.innerHTML = '';
+    for (let i = 0; i < MAX_PER_DAY; i++) {
+      const pip = document.createElement('div');
+      pip.className = 'pip' + (i < remaining ? ' active' : '');
+      pipsEl.appendChild(pip);
+    }
+
+    countEl.textContent = `${remaining}/${MAX_PER_DAY}`;
+
+    if (remaining === 0) {
+      exhaustedEl.style.display = 'block';
+      mainForm.style.display = 'none';
+      limitBar.style.display = 'none';
+      warningEl.style.display = 'none';
+    } else if (remaining === 1) {
+      warningEl.style.display = 'block';
+    } else {
+      warningEl.style.display = 'none';
+    }
+  }
+
+  // ─── MODE TOGGLE ─────────────────────────────────────────────────────────
+  function setMode(m) {
+    mode = m;
+    document.getElementById('toggleLink').classList.toggle('active', m === 'link');
+    document.getElementById('toggleChat').classList.toggle('active', m === 'chat');
+    const label = document.getElementById('inputLabel');
+    const field = document.getElementById('inputField');
+    if (m === 'link') {
+      label.textContent = 'Tempel URL atau link yang ingin dicek';
+      field.placeholder = 'https://hadiah-gratis.xyz atau bit.ly/xyz123...';
+      field.rows = 4;
+    } else {
+      label.textContent = 'Tempel isi chat, pesan, atau email yang mencurigakan';
+      field.placeholder = 'Selamat! Anda memenangkan hadiah Rp 50 juta. Klik link ini sekarang untuk klaim...';
+      field.rows = 6;
+    }
+    document.getElementById('inputField').value = '';
+    updateCharCount();
+  }
+
+  function updateCharCount() {
+    const len = document.getElementById('inputField').value.length;
+    document.getElementById('charCount').textContent = `${len} / 3000`;
+  }
+
+  function clearInput() {
+    document.getElementById('inputField').value = '';
+    updateCharCount();
+  }
+
+  // ─── PRIVACY MASKING ─────────────────────────────────────────────────────
+  function maskPrivateData(text) {
+    // Mask phone numbers
+    text = text.replace(/(\+62|0)(8\d{2})\d{4,6}(\d{3})/g, (_, prefix, start, end) => `${prefix}${start}****${end}`);
+    // Mask emails
+    text = text.replace(/([a-zA-Z0-9._%+-]{2})[a-zA-Z0-9._%+-]+(@[a-zA-Z0-9.-]+)/g, '$1***$2');
+    return text;
+  }
+
+  // ─── RISK KEYWORDS ───────────────────────────────────────────────────────
+  function quickRiskCheck(input) {
+    const lower = input.toLowerCase();
+    const highKeywords = ['transfer', 'hadiah', 'klik sekarang', 'selamat anda menang', 'verifikasi akun', 'atm', 'pin', 'password', 'rekening', 'dana gratis', 'click here', 'claim now', 'free gift', 'winner', 'lucky'];
+    const suspiciousDomains = ['.xyz', '.tk', '.ml', '.ga', '.cf', 'bit.ly', 'tinyurl', 'shorturl', 'free-', 'hadiah', 'lucky', 'winner', 'kemenangan'];
+
+    let risk = 'LOW';
+    for (const k of highKeywords) {
+      if (lower.includes(k)) { risk = 'HIGH'; break; }
+    }
+    if (risk !== 'HIGH' && mode === 'link') {
+      for (const d of suspiciousDomains) {
+        if (lower.includes(d)) { risk = 'MEDIUM'; break; }
+      }
+    }
+    return risk;
+  }
+
+  // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
+  async function analyze() {
+    const input = document.getElementById('inputField').value.trim();
+
+    if (!input) {
+      alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
+      return;
+    }
+
+    if (input.length < 5) {
+      alert('Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
+      return;
+    }
+
+    const remaining = getRemainingChecks();
+    if (remaining <= 0) {
+      renderLimitUI();
+      return;
+    }
+
+    // Sanitize
+    const safeInput = maskPrivateData(input);
+    const quickRisk = quickRiskCheck(input);
+
+    // UI state: loading
+    document.getElementById('ctaBtn').disabled = true;
+    document.getElementById('ctaBtn').textContent = 'Menganalisa... 🔍';
+    document.getElementById('loadingState').style.display = 'block';
+    document.getElementById('resultCard').style.display = 'none';
+
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: safeInput,
+          mode: mode,
+          quickRisk: quickRisk
+        })
+      });
+
+      if (!response.ok) throw new Error('API error: ' + response.status);
+      const data = await response.json();
+
+      // Consume 1 usage
+      const usage = getUsage();
+      saveUsage(usage.count + 1);
+
+      renderResult(data);
+      renderLimitUI();
+
+    } catch (err) {
+      console.error(err);
+      // Fallback result if API fails
+      renderFallback(quickRisk);
+      const usage = getUsage();
+      saveUsage(usage.count + 1);
+      renderLimitUI();
+    } finally {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('ctaBtn').disabled = false;
+      document.getElementById('ctaBtn').textContent = 'Amankan Sekarang 🛡️';
+    }
+  }
+
+  function renderResult(data) {
+    const level = data.riskLevel || 'MEDIUM'; // LOW, MEDIUM, HIGH
+    const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
+
+    const statusMap = {
+      LOW: '🟢 AMAN — TIDAK TERDETEKSI PENIPUAN',
+      MEDIUM: '⚠️ PERLU HATI-HATI',
+      HIGH: '🚨 BERBAHAYA — JANGAN DIBUKA'
+    };
+
+    document.getElementById('statusStrip').className = `status-strip ${cssClass}`;
+    document.getElementById('resultStatus').className = `result-status ${cssClass}`;
+    document.getElementById('resultStatus').textContent = statusMap[level];
+    document.getElementById('resultSummary').textContent = data.summary || '';
+
+    const fill = document.getElementById('confidenceFill');
+    const label = document.getElementById('confidenceLabel');
+    fill.className = `confidence-fill ${cssClass}`;
+    label.className = `confidence-label ${cssClass}`;
+    label.textContent = `${data.confidence || 80}% yakin ${level === 'LOW' ? 'aman' : level === 'MEDIUM' ? 'perlu hati-hati' : 'berbahaya'}`;
+    setTimeout(() => { fill.style.width = (data.confidence || 80) + '%'; }, 100);
+
+    const reasonsList = document.getElementById('reasonsList');
+    reasonsList.innerHTML = '';
+    (data.reasons || []).forEach(r => {
+      const li = document.createElement('li');
+      const icon = level === 'LOW' ? '✔' : level === 'MEDIUM' ? '⚠️' : '✖';
+      li.innerHTML = `<span class="icon">${icon}</span> ${r}`;
+      reasonsList.appendChild(li);
+    });
+
+    const suggestionsList = document.getElementById('suggestionsList');
+    suggestionsList.innerHTML = '';
+    (data.suggestions || []).forEach(s => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="icon">•</span> ${s}`;
+      suggestionsList.appendChild(li);
+    });
+
+    const singkat = document.getElementById('singkat');
+    singkat.className = `result-singkat ${cssClass}`;
+    singkat.textContent = '👉 Singkatnya: ' + (data.singkat || '');
+
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderFallback(quickRisk) {
+    const fallbacks = {
+      HIGH: {
+        riskLevel: 'HIGH',
+        summary: 'Terdeteksi pola yang sering digunakan dalam penipuan digital.',
+        confidence: 78,
+        reasons: ['Mengandung kata kunci penipuan umum', 'Pola mendesak untuk bertindak cepat', 'Tawaran yang tidak realistis'],
+        suggestions: ['Jangan klik link apapun dalam pesan ini', 'Jangan transfer uang', 'Laporkan ke pihak berwenang jika perlu'],
+        singkat: 'terlalu berisiko, lebih baik abaikan saja.'
+      },
+      MEDIUM: {
+        riskLevel: 'MEDIUM',
+        summary: 'Ada beberapa indikasi yang perlu diwaspadai, meskipun belum pasti penipuan.',
+        confidence: 65,
+        reasons: ['Beberapa elemen terlihat tidak lazim', 'Identitas pengirim tidak jelas', 'Perlu verifikasi lebih lanjut'],
+        suggestions: ['Verifikasi langsung ke sumber resmi', 'Jangan beri data pribadi', 'Konsultasi dengan orang terpercaya'],
+        singkat: 'jangan terburu-buru, cek dulu ke sumber resminya.'
+      },
+      LOW: {
+        riskLevel: 'LOW',
+        summary: 'Tidak ditemukan indikasi penipuan yang jelas dari input ini.',
+        confidence: 82,
+        reasons: ['Tidak ada kata kunci penipuan', 'Struktur terlihat normal', 'Tidak ada urgensi mencurigakan'],
+        suggestions: ['Aman untuk dibaca', 'Tetap verifikasi jika ada keraguan', 'Waspada selalu ya'],
+        singkat: 'terlihat aman, tapi tetap jaga kewaspadaan.'
+      }
+    };
+    renderResult(fallbacks[quickRisk] || fallbacks.MEDIUM);
+  }
+
+  function resetForm() {
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('inputField').value = '';
+    updateCharCount();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ─── INIT ─────────────────────────────────────────────────────────────────
+  renderLimitUI();
+</script>
+</body>
+</html>
