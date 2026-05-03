@@ -772,12 +772,22 @@
       alert('Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
       return;
     }
+    const type = mode;
+const result = "checked";
 
-    const remaining = getRemainingChecks();
-    if (remaining <= 0) {
-      renderLimitUI();
-      return;
-    }
+try {
+  saveToDatabase(input, type, result);
+} catch (e) {
+  console.log("DB error:", e);
+}
+
+const remaining = getRemainingChecks();
+if (remaining <= 0) {
+  renderLimitUI();
+  return;
+}
+
+    
 
     // Sanitize
     const safeInput = maskPrivateData(input);
