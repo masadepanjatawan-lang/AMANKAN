@@ -920,7 +920,7 @@ if (!window.supabaseClient) {
   window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 }
 
-const supabase = window.supabaseClient;
+var supabase = window.supabaseClient;
   async function saveToDatabase(input, type, result) {
   const { data, error } = await supabase
     .from('scans')
