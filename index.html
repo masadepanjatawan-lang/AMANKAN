@@ -797,15 +797,7 @@ if (remaining <= 0) {
     document.getElementById('resultCard').style.display = 'none';
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: safeInput,
-          mode: mode,
-          quickRisk: quickRisk
-        })
-      });
+      
 
       if (!response.ok) throw new Error('API error: ' + response.status);
       const data = await response.json();
