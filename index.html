@@ -773,7 +773,7 @@
 const result = "checked";
 
 try {
-  saveToDatabase(input, type, result);
+ await  saveToDatabase(input, type, result);
 } catch (e) {
   console.log("DB error:", e);
 }
