@@ -758,10 +758,7 @@
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
     const input = document.getElementById("inputField").value.trim();
-  const type = mode;
-  const result = "checked";
 
-  saveToDatabase(input, type, result);
 
   if (!input) {
     alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
@@ -920,20 +917,6 @@ if (remaining <= 0) {
 
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
-</script>
-  <script>
-function setMode(mode) {
-  document.getElementById("toggleLink").classList.remove("active");
-  document.getElementById("toggleChat").classList.remove("active");
-
-  if (mode === "link") {
-    document.getElementById("toggleLink").classList.add("active");
-  } else {
-    document.getElementById("toggleChat").classList.add("active");
-  }
-}
-
-setMode("link");
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
