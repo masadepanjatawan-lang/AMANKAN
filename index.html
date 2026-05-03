@@ -757,11 +757,15 @@
 
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
-    const input = document.getElementById('inputField').value.trim();
+    const input = document.getElementById("inputField").value.trim();
+  const type = mode;
+  const result = "checked";
 
-    if (!input) {
-      alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
-      return;
+  saveToDatabase(input, type, result);
+
+  if (!input) {
+    alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
+    return;
     }
 
     if (input.length < 5) {
