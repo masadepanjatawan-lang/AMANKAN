@@ -904,5 +904,19 @@
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
 </script>
+  <script>
+function setMode(mode) {
+  document.getElementById("toggleLink").classList.remove("active");
+  document.getElementById("toggleChat").classList.remove("active");
+
+  if (mode === "link") {
+    document.getElementById("toggleLink").classList.add("active");
+  } else {
+    document.getElementById("toggleChat").classList.add("active");
+  }
+}
+
+setMode("link");
+</script>
 </body>
 </html>
