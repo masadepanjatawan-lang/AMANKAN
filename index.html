@@ -942,6 +942,24 @@ const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
 const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
 
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  async function saveToDatabase(input, type, result) {
+  const { data, error } = await supabase
+    .from('scans')
+    .insert([
+      {
+        input: input,
+        type: type,
+        result: result
+      }
+    ]);
+
+  if (error) {
+    console.log("Supabase error:", error);
+  } else {
+    console.log("Data saved:", data);
+  }
+}
+
 </script>
 </body>
 </html>
