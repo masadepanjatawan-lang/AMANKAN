@@ -891,7 +891,15 @@ const data = {
   }
 
   function renderResult(data) {
-    const level = data.riskLevel || 'MEDIUM'; // LOW, MEDIUM, HIGH
+   let level;
+
+if (data.status === "aman") {
+  level = "LOW";
+} else if (data.status === "warning") {
+  level = "MEDIUM";
+} else {
+  level = "HIGH";
+}
     const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
 
     const statusMap = {
