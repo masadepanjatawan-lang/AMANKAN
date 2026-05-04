@@ -797,25 +797,35 @@ if (remaining <= 0) {
     document.getElementById('resultCard').style.display = 'none';
 
     try {
-   const data = {
-  status: "warning",
-  score: 80,
+   const random = Math.random();
 
-  reasons: [
-    "Link terlihat tidak familiar",
-    "Tidak ada reputasi domain",
-    "Berpotensi redirect mencurigakan"
-  ],
+let data;
 
-  suggestions: [
-    "Jangan klik sembarangan",
-    "Cek ulang URL dengan teliti",
-    "Gunakan sumber resmi"
-  ],
-
-  summary: "Link ini terlihat mencurigakan, sebaiknya hindari untuk sementara."
-};
-
+if (random < 0.4) {
+  data = {
+    status: "aman",
+    score: 85,
+    reasons: ["Tidak ada indikasi mencurigakan"],
+    suggestions: ["Tetap waspada jika diminta data pribadi"],
+    summary: "Link terlihat aman untuk digunakan."
+  };
+} else if (random < 0.75) {
+  data = {
+    status: "warning",
+    score: 65,
+    reasons: ["Domain kurang dikenal", "Struktur URL mencurigakan"],
+    suggestions: ["Jangan masukkan data sensitif", "Cek ulang sumber"],
+    summary: "Perlu kehati-hatian sebelum menggunakan link ini."
+  };
+} else {
+  data = {
+    status: "danger",
+    score: 30,
+    reasons: ["Mengandung pola scam", "Berpotensi phishing"],
+    suggestions: ["Jangan klik link", "Laporkan jika mencurigakan"],
+    summary: "Link ini berpotensi berbahaya, hindari penggunaan."
+  };
+}
      
       // Consume 1 usage
       const usage = getUsage();
