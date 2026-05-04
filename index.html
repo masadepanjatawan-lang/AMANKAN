@@ -797,35 +797,74 @@ if (remaining <= 0) {
     document.getElementById('resultCard').style.display = 'none';
 
     try {
-   const random = Math.random();
+  let score = 80;
+let reasons = [];
+let suggestions = [];
 
-let data;
+const text = input.toLowerCase();
 
-if (random < 0.4) {
-  data = {
-    status: "aman",
-    score: 85,
-    reasons: ["Tidak ada indikasi mencurigakan"],
-    suggestions: ["Tetap waspada jika diminta data pribadi"],
-    summary: "Link terlihat aman untuk digunakan."
-  };
-} else if (random < 0.75) {
-  data = {
-    status: "warning",
-    score: 65,
-    reasons: ["Domain kurang dikenal", "Struktur URL mencurigakan"],
-    suggestions: ["Jangan masukkan data sensitif", "Cek ulang sumber"],
-    summary: "Perlu kehati-hatian sebelum menggunakan link ini."
-  };
-} else {
-  data = {
-    status: "danger",
-    score: 30,
-    reasons: ["Mengandung pola scam", "Berpotensi phishing"],
-    suggestions: ["Jangan klik link", "Laporkan jika mencurigakan"],
-    summary: "Link ini berpotensi berbahaya, hindari penggunaan."
-  };
+// 🚨 kata bahaya
+if (text.includes("hadiah") || text.includes("gratis")) {
+  score -= 30;
+  reasons.push("Mengandung kata penipuan seperti 'hadiah/gratis'");
 }
+
+if (text.includes("login") || text.includes("verifikasi")) {
+  score -= 25;
+  reasons.push("Meminta login atau verifikasi mencurigakan");
+}
+
+if (text.includes("klik sekarang") || text.includes("buruan")) {
+  score -= 20;
+  reasons.push("Mengandung urgensi tinggi (teknik scam)");
+}
+
+// 🟡 domain aneh
+if (text.includes(".xyz") || text.includes("bit.ly")) {
+  score -= 15;
+  reasons.push("Menggunakan domain/link pendek mencurigakan");
+}
+
+// 🟢 kalau nggak ada masalah
+if (reasons.length === 0) {
+  reasons.push("Tidak ditemukan indikasi mencurigakan");
+}
+
+// 📊 tentuin status
+let status;
+if (score > 75) {
+  status = "aman";
+} else if (score > 50) {
+  status = "warning";
+} else {
+  status = "danger";
+}
+
+// 💡 saran
+if (status === "danger") {
+  suggestions = ["Jangan klik link", "Laporkan sebagai penipuan"];
+} else if (status === "warning") {
+  suggestions = ["Cek ulang sumber", "Jangan isi data pribadi"];
+} else {
+  suggestions = ["Tetap waspada jika diminta informasi sensitif"];
+}
+
+// 🧾 summary
+let summary =
+  status === "aman"
+    ? "Link terlihat aman."
+    : status === "warning"
+    ? "Perlu kehati-hatian."
+    : "Berpotensi penipuan.";
+
+// 🎯 final data
+const data = {
+  status,
+  score,
+  reasons,
+  suggestions,
+  summary
+};
      
       // Consume 1 usage
       const usage = getUsage();
