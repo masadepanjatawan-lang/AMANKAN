@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AMANKAN — Anti Scam Checker</title>
+  <title>AMANKAN — Anti Scam Checker</title>let summary
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -798,6 +798,7 @@ if (remaining <= 0) {
 
     try {
   let score = 80;
+  const confidence = score + "% yakin";    
 let reasons = [];
 let suggestions = [];
 
@@ -851,22 +852,29 @@ if (status === "danger") {
 
 // 🧾 summary
 let summary;
-
+let singkat;
 if (status === "aman") {
   summary = "Link terlihat aman dan tidak ditemukan indikasi mencurigakan.";
+if (status === "aman") {
+  summary = "Link terlihat aman dan tidak ditemukan indikasi mencurigakan.";
+  singkat = "Aman, tapi tetap jangan asal isi data pribadi.";
 } else if (status === "warning") {
   summary = "Link ini perlu kehati-hatian karena terdapat beberapa indikasi mencurigakan.";
+  singkat = "Masih abu-abu, jangan langsung percaya.";
 } else {
   summary = "Link ini berpotensi penipuan dan sangat disarankan untuk dihindari.";
+  singkat = "Bahaya, mending skip aja.";
 }
 
 // 🎯 final data
 const data = {
   status,
   score,
+  confidence,
   reasons,
   suggestions,
-  summary
+  summary,
+  singkat
 };
      
       // Consume 1 usage
