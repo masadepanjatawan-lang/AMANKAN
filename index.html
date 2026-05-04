@@ -853,9 +853,7 @@ if (status === "danger") {
 // 🧾 summary
 let summary;
 let singkat;
-if (status === "aman") {
-  summary = "Link terlihat aman dan tidak ditemukan indikasi mencurigakan.";
-if (status === "aman") {
+
   summary = "Link terlihat aman dan tidak ditemukan indikasi mencurigakan.";
   singkat = "Aman, tapi tetap jangan asal isi data pribadi.";
 } else if (status === "warning") {
@@ -867,15 +865,7 @@ if (status === "aman") {
 }
 
 // 🎯 final data
-const data = {
-  status,
-  score,
-  confidence,
-  reasons,
-  suggestions,
-  summary,
-  singkat
-};
+const data = const data = analyzeInput(input);
      
       // Consume 1 usage
       const usage = getUsage();
@@ -1021,7 +1011,17 @@ var supabase = window.supabaseClient;
     console.log("Data saved:", data);
   }
 }
-
+function analyzeInput(input) {
+  return {
+    status: "safe",
+    score: 85,
+    confidence: "85% yakin",
+    reasons: ["Tidak ditemukan indikasi mencurigakan"],
+    suggestions: ["Tetap waspada ya"],
+    summary: "Link terlihat aman.",
+    singkat: "Aman"
+  };
+}
 </script>
 </body>
 </html>
