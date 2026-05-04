@@ -797,11 +797,12 @@ if (remaining <= 0) {
     document.getElementById('resultCard').style.display = 'none';
 
     try {
-      
+     const data = {
+  status: "aman",
+  score: 82
+}; 
 
-      if (!response.ok) throw new Error('API error: ' + response.status);
-      const data = await response.json();
-
+     
       // Consume 1 usage
       const usage = getUsage();
       saveUsage(usage.count + 1);
