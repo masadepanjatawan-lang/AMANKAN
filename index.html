@@ -797,10 +797,24 @@ if (remaining <= 0) {
     document.getElementById('resultCard').style.display = 'none';
 
     try {
-     const data = {
-  status: "aman",
-  score: 82
-}; 
+   const data = {
+  status: "warning",
+  score: 80,
+
+  reasons: [
+    "Link terlihat tidak familiar",
+    "Tidak ada reputasi domain",
+    "Berpotensi redirect mencurigakan"
+  ],
+
+  suggestions: [
+    "Jangan klik sembarangan",
+    "Cek ulang URL dengan teliti",
+    "Gunakan sumber resmi"
+  ],
+
+  summary: "Link ini terlihat mencurigakan, sebaiknya hindari untuk sementara."
+};
 
      
       // Consume 1 usage
