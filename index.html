@@ -760,18 +760,24 @@ let learnedKeywords = [];
 async function loadLearnedPatterns() {
   try {
     const { data, error } = await supabase
-      .from("scans")
-      .select("input, status")
-      .eq("status", "danger")
-      .limit(100);
+      .from("learned_patterns")
+      .select("word, count");
 
     if (error) {
-      console.log("learning error:", error);
+      console.log("load error:", error);
       return;
     }
 
-    let wordFreq = {};
+    learnedKeywords = data
+      .filter(d => d.count >= 2)
+      .map(d => d.word);
 
+    console.log("🔥 Loaded learned keywords:", learnedKeywords);
+
+  } catch (e) {
+    console.log("exception:", e);
+  }
+}
     data.forEach(row => {
       const words = row.input.toLowerCase().split(/\W+/);
 
@@ -833,6 +839,13 @@ if (remaining <= 0) {
   let dangerCount = 0;
  
   const text = input.toLowerCase();
+      learnedKeywords.forEach(word => {
+  if (text.includes(word)) {
+    score -= 10;
+    dangerCount++;
+    reasons.push(`Pola scam terdeteksi: "${word}"`);
+  }
+});
       // ─── APPLY LEARNED PATTERNS ──────────────────────
 learnedKeywords.forEach(word => {
   if (text.includes(word)) {
@@ -1022,6 +1035,7 @@ if (
  
   // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
   if (status === "danger") {
+    await saveLearnedPatterns(input);
     suggestions = [
       "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
       "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
@@ -1231,6 +1245,35 @@ if (!window.supabaseClient) {
 var supabase = window.supabaseClient;
   // 🔥 PANGGIL SETELAH SUPABASE SIAP
 loadLearnedPatterns();
+  async function saveLearnedPatterns(input) {
+  try {
+    const words = input.toLowerCase().split(/\W+/);
+
+    for (const w of words) {
+      if (w.length <= 4) continue;
+
+      const { data } = await supabase
+        .from("learned_patterns")
+        .select("*")
+        .eq("word", w)
+        .maybeSingle();
+
+      if (data) {
+        await supabase
+          .from("learned_patterns")
+          .update({ count: data.count + 1 })
+          .eq("id", data.id);
+      } else {
+        await supabase
+          .from("learned_patterns")
+          .insert([{ word: w, count: 1 }]);
+      }
+    }
+
+  } catch (e) {
+    console.log("save learning error:", e);
+  }
+}
  
 async function saveToDatabase(input, type, data) {
   try {
