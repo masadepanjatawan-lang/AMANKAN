@@ -1128,28 +1128,38 @@ var supabase = window.supabaseClient;
  
 async function saveToDatabase(input, type, data) {
   try {
+    if (!input || !data) {
+      console.log("❌ Data tidak valid");
+      return;
+    }
+
+    const payload = {
+      input: input,
+      type: type,
+      status: data.status,
+      score: data.score,
+      confidence: data.confidence,
+      summary: data.summary,
+      singkat: data.singkat,
+      reasons: JSON.stringify(data.reasons || []),
+      suggestions: JSON.stringify(data.suggestions || []),
+      created_at: new Date().toISOString()
+    };
+
     const { error } = await supabase
       .from('scans')
-      .insert([
-        {
-          input: input,
-          type: type,
-          status: data.status,
-          score: data.score,
-          confidence: data.confidence,
-          summary: data.summary,
-          singkat: data.singkat,
-          created_at: new Date().toISOString()
-        }
-      ]);
+      .insert([payload]);
+
     if (error) {
-      console.log("Supabase error:", error);
+      console.log("❌ Supabase ERROR:", error.message);
+    } else {
+      console.log("✅ Data berhasil masuk ke Supabase");
     }
+
   } catch (e) {
-    console.log("saveToDatabase exception:", e);
+    console.log("❌ Exception:", e);
   }
 }
- 
 async function trackVisitor() {
   try {
     const today = new Date().toISOString().split('T')[0];
