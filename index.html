@@ -799,6 +799,37 @@ if (remaining <= 0) {
   const text = input.toLowerCase();
  
   // Kata bahaya — bobot tinggi
+  // ─── JOB SCAM DETECTION ─────────────────────────
+
+// deposit (PALING PENTING)
+if (text.includes("deposit")) {
+  score -= 40; dangerCount++;
+  reasons.push("Meminta deposit awal — ciri khas penipuan kerja online");
+}
+
+// gaji mencurigakan
+if (text.includes("gaji")) {
+  score -= 15; dangerCount++;
+  reasons.push("Menawarkan gaji dalam konteks mencurigakan");
+}
+
+// kerja online
+if (text.includes("kerja online")) {
+  score -= 20; dangerCount++;
+  reasons.push("Penawaran kerja online tanpa detail jelas — pola umum scam");
+}
+
+// aktivasi akun berbayar
+if (text.includes("aktivasi akun")) {
+  score -= 25; dangerCount++;
+  reasons.push("Meminta pembayaran untuk aktivasi akun — tidak lazim pada pekerjaan resmi");
+}
+
+// kerja ringan hasil besar
+if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
+  score -= 15; dangerCount++;
+  reasons.push("Janji kerja ringan dengan hasil besar — indikasi tidak realistis");
+}
   if (text.includes("transfer")) {
     score -= 25; dangerCount++;
     reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
