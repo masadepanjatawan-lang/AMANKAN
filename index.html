@@ -830,6 +830,23 @@ if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
   score -= 15; dangerCount++;
   reasons.push("Janji kerja ringan dengan hasil besar — indikasi tidak realistis");
 }
+      // biaya admin
+if (text.includes("biaya admin")) {
+  score -= 30; dangerCount++;
+  reasons.push("Meminta biaya admin — variasi lain dari deposit scam");
+}
+
+// tanpa pengalaman
+if (text.includes("tanpa pengalaman")) {
+  score -= 10; dangerCount++;
+  reasons.push("Menawarkan kerja tanpa pengalaman — sering dipakai dalam scam");
+}
+
+// langsung cair
+if (text.includes("langsung cair")) {
+  score -= 15; dangerCount++;
+  reasons.push("Janji hasil instan — indikasi tidak realistis");
+}
   if (text.includes("transfer")) {
     score -= 25; dangerCount++;
     reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
