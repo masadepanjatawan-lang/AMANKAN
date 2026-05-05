@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AMANKAN — Anti Scam Checker</title>let summary
+  <title>AMANKAN — Anti Scam Checker</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -26,9 +26,9 @@
   background: #3dffa0 !important;
   color: black !important;
 }
-
+ 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+ 
     body {
       background: var(--bg);
       color: var(--text);
@@ -37,7 +37,7 @@
       overflow-x: hidden;
       position: relative;
     }
-
+ 
     /* Grid noise background */
     body::before {
       content: '';
@@ -49,7 +49,7 @@
       pointer-events: none;
       z-index: 0;
     }
-
+ 
     body::after {
       content: '';
       position: fixed;
@@ -58,7 +58,7 @@
       pointer-events: none;
       z-index: 0;
     }
-
+ 
     .wrapper {
       position: relative;
       z-index: 1;
@@ -66,14 +66,14 @@
       margin: 0 auto;
       padding: 48px 20px 80px;
     }
-
+ 
     /* Header */
     .header {
       text-align: center;
       margin-bottom: 40px;
       animation: fadeDown 0.6s ease both;
     }
-
+ 
     .badge {
       display: inline-flex;
       align-items: center;
@@ -89,7 +89,7 @@
       border-radius: 100px;
       margin-bottom: 20px;
     }
-
+ 
     .logo {
       font-family: var(--font-display);
       font-size: clamp(40px, 8vw, 70px);
@@ -102,14 +102,14 @@
       background-clip: text;
       margin-bottom: 12px;
     }
-
+ 
     .tagline {
       font-size: 16px;
       color: var(--muted);
       font-weight: 400;
       line-height: 1.5;
     }
-
+ 
     /* Limit counter */
     .limit-bar {
       display: flex;
@@ -123,24 +123,24 @@
       animation: fadeDown 0.6s 0.1s ease both;
       opacity: 0;
     }
-
+ 
     .limit-label {
       font-size: 13px;
       color: var(--muted);
     }
-
+ 
     .limit-count {
       font-family: var(--font-display);
       font-size: 14px;
       font-weight: 700;
       color: var(--accent);
     }
-
+ 
     .limit-pips {
       display: flex;
       gap: 5px;
     }
-
+ 
     .pip {
       width: 28px;
       height: 6px;
@@ -148,9 +148,9 @@
       background: var(--surface2);
       transition: background 0.3s;
     }
-
+ 
     .pip.active { background: var(--accent); }
-
+ 
     .limit-warning {
       background: rgba(255,204,51,0.08);
       border: 1px solid rgba(255,204,51,0.2);
@@ -162,7 +162,7 @@
       display: none;
       animation: fadeDown 0.3s ease both;
     }
-
+ 
     .limit-exhausted {
       background: rgba(255,61,90,0.08);
       border: 1px solid rgba(255,61,90,0.2);
@@ -171,19 +171,19 @@
       text-align: center;
       display: none;
     }
-
+ 
     .limit-exhausted h3 {
       font-family: var(--font-display);
       font-size: 18px;
       color: var(--danger);
       margin-bottom: 8px;
     }
-
+ 
     .limit-exhausted p {
       font-size: 14px;
       color: var(--muted);
     }
-
+ 
     /* Toggle */
     .toggle-wrap {
       display: flex;
@@ -196,7 +196,7 @@
       animation: fadeDown 0.6s 0.15s ease both;
       opacity: 0;
     }
-
+ 
     .toggle-btn {
       flex: 1;
       padding: 12px;
@@ -214,13 +214,13 @@
       justify-content: center;
       gap: 7px;
     }
-
+ 
     .toggle-btn.active {
       background: var(--surface2);
       color: var(--text);
       box-shadow: 0 2px 12px rgba(0,0,0,0.3);
     }
-
+ 
     /* Input card */
     .input-card {
       background: var(--surface);
@@ -232,11 +232,11 @@
       opacity: 0;
       transition: border-color 0.3s;
     }
-
+ 
     .input-card:focus-within {
       border-color: rgba(61,255,160,0.3);
     }
-
+ 
     .input-label {
       font-size: 12px;
       font-weight: 600;
@@ -246,7 +246,7 @@
       margin-bottom: 12px;
       display: block;
     }
-
+ 
     .input-field {
       width: 100%;
       background: var(--surface2);
@@ -261,22 +261,22 @@
       transition: border-color 0.25s;
       line-height: 1.5;
     }
-
+ 
     .input-field::placeholder { color: var(--muted); opacity: 0.6; }
     .input-field:focus { border-color: rgba(61,255,160,0.4); }
-
+ 
     .input-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-top: 10px;
     }
-
+ 
     .char-count {
       font-size: 11px;
       color: var(--muted);
     }
-
+ 
     .clear-btn {
       font-size: 11px;
       color: var(--muted);
@@ -287,9 +287,9 @@
       border-radius: 6px;
       transition: color 0.2s;
     }
-
+ 
     .clear-btn:hover { color: var(--text); }
-
+ 
     /* CTA button */
     .cta-btn {
       width: 100%;
@@ -309,7 +309,7 @@
       animation: fadeDown 0.6s 0.25s ease both;
       opacity: 0;
     }
-
+ 
     .cta-btn::before {
       content: '';
       position: absolute;
@@ -318,12 +318,12 @@
       opacity: 0;
       transition: opacity 0.25s;
     }
-
+ 
     .cta-btn:hover:not(:disabled)::before { opacity: 1; }
     .cta-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(61,255,160,0.3); }
     .cta-btn:active:not(:disabled) { transform: translateY(0); }
     .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
+ 
     /* Loading */
     .loading-state {
       display: none;
@@ -334,7 +334,7 @@
       border-radius: 20px;
       margin-top: 20px;
     }
-
+ 
     .spinner {
       width: 48px;
       height: 48px;
@@ -344,19 +344,19 @@
       margin: 0 auto 16px;
       animation: spin 0.8s linear infinite;
     }
-
+ 
     .loading-text {
       font-size: 15px;
       color: var(--muted);
     }
-
+ 
     .loading-sub {
       font-size: 12px;
       color: var(--muted);
       opacity: 0.6;
       margin-top: 6px;
     }
-
+ 
     /* Result card */
     .result-card {
       display: none;
@@ -366,12 +366,12 @@
       margin-top: 20px;
       animation: fadeUp 0.5s ease both;
     }
-
+ 
     .result-header {
       padding: 28px 28px 20px;
       border-bottom: 1px solid var(--border);
     }
-
+ 
     .result-status {
       font-family: var(--font-display);
       font-size: clamp(22px, 5vw, 30px);
@@ -379,24 +379,24 @@
       line-height: 1.1;
       margin-bottom: 10px;
     }
-
+ 
     .result-status.safe { color: var(--accent); }
     .result-status.warn { color: var(--warn); }
     .result-status.danger { color: var(--danger); }
-
+ 
     .result-summary {
       font-size: 15px;
       color: var(--text);
       line-height: 1.5;
       margin-bottom: 14px;
     }
-
+ 
     .confidence-bar-wrap {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-
+ 
     .confidence-track {
       flex: 1;
       height: 6px;
@@ -404,35 +404,35 @@
       border-radius: 3px;
       overflow: hidden;
     }
-
+ 
     .confidence-fill {
       height: 100%;
       border-radius: 3px;
       transition: width 1s cubic-bezier(0.4,0,0.2,1);
     }
-
+ 
     .confidence-fill.safe { background: var(--accent); }
     .confidence-fill.warn { background: var(--warn); }
     .confidence-fill.danger { background: var(--danger); }
-
+ 
     .confidence-label {
       font-size: 13px;
       font-weight: 600;
       white-space: nowrap;
     }
-
+ 
     .confidence-label.safe { color: var(--accent); }
     .confidence-label.warn { color: var(--warn); }
     .confidence-label.danger { color: var(--danger); }
-
+ 
     .result-body {
       padding: 20px 28px;
     }
-
+ 
     .result-section {
       margin-bottom: 20px;
     }
-
+ 
     .result-section-title {
       font-size: 11px;
       font-weight: 700;
@@ -441,14 +441,14 @@
       color: var(--muted);
       margin-bottom: 10px;
     }
-
+ 
     .result-points {
       list-style: none;
       display: flex;
       flex-direction: column;
       gap: 7px;
     }
-
+ 
     .result-points li {
       font-size: 14px;
       color: var(--text);
@@ -457,9 +457,9 @@
       align-items: flex-start;
       gap: 8px;
     }
-
+ 
     .result-points li span.icon { flex-shrink: 0; }
-
+ 
     .result-singkat {
       background: var(--surface2);
       border-radius: 12px;
@@ -470,10 +470,10 @@
       border-left: 3px solid var(--accent);
       margin-bottom: 20px;
     }
-
+ 
     .result-singkat.warn { border-color: var(--warn); }
     .result-singkat.danger { border-color: var(--danger); }
-
+ 
     .disclaimer {
       font-size: 12px;
       color: var(--muted);
@@ -483,7 +483,7 @@
       border-top: 1px solid var(--border);
       line-height: 1.5;
     }
-
+ 
     .scan-again-btn {
       width: calc(100% - 56px);
       margin: 0 28px 24px;
@@ -498,9 +498,9 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-
+ 
     .scan-again-btn:hover { border-color: rgba(61,255,160,0.3); color: var(--text); }
-
+ 
     /* Status indicator strip */
     .status-strip {
       height: 4px;
@@ -508,22 +508,22 @@
     .status-strip.safe { background: linear-gradient(90deg, var(--accent), #00c97a); }
     .status-strip.warn { background: linear-gradient(90deg, var(--warn), #e6a800); }
     .status-strip.danger { background: linear-gradient(90deg, var(--danger), #c71535); }
-
+ 
     /* Animations */
     @keyframes fadeDown {
       from { opacity: 0; transform: translateY(-16px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
+ 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
+ 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-
+ 
     /* Footer */
     .footer {
       text-align: center;
@@ -532,7 +532,7 @@
       color: var(--muted);
       opacity: 0.4;
     }
-
+ 
     @media (max-width: 480px) {
       .wrapper { padding: 32px 16px 60px; }
       .result-header, .result-body { padding-left: 20px; padding-right: 20px; }
@@ -543,14 +543,14 @@
 </head>
 <body>
 <div class="wrapper">
-
+ 
   <!-- Header -->
   <div class="header">
     <div class="badge">🛡️ Anti Scam Checker</div>
     <div class="logo">AMANKAN</div>
     <p class="tagline">Hindari penipuan sebelum uang Anda hilang.</p>
   </div>
-
+ 
   <!-- Limit Bar -->
   <div class="limit-bar" id="limitBar">
     <span class="limit-label">Sisa pengecekan hari ini</span>
@@ -559,16 +559,16 @@
       <span class="limit-count" id="limitCount">5/5</span>
     </div>
   </div>
-
+ 
   <!-- Warning 1 left -->
   <div class="limit-warning" id="limitWarning">⚠️ Sisa 1 pengecekan lagi hari ini. Gunakan dengan bijak!</div>
-
+ 
   <!-- Exhausted -->
   <div class="limit-exhausted" id="limitExhausted">
     <h3>🚫 Batas Harian Tercapai</h3>
     <p>Anda telah menggunakan 5 pengecekan hari ini.<br>Kembali lagi besok atau <strong style="color:var(--warn)">upgrade</strong> untuk pengecekan tanpa batas.</p>
   </div>
-
+ 
   <!-- Main form -->
   <div id="mainForm">
     <!-- Toggle -->
@@ -580,7 +580,7 @@
         💬 Chat / Pesan
       </button>
     </div>
-
+ 
     <!-- Input -->
     <div class="input-card">
       <label class="input-label" id="inputLabel">Tempel URL atau link yang ingin dicek</label>
@@ -597,20 +597,20 @@
         <button class="clear-btn" onclick="clearInput()">✕ Hapus</button>
       </div>
     </div>
-
+ 
     <!-- CTA -->
     <button class="cta-btn" id="ctaBtn" onclick="analyze()">
       Amankan Sekarang 🛡️
     </button>
   </div>
-
+ 
   <!-- Loading -->
   <div class="loading-state" id="loadingState">
     <div class="spinner"></div>
     <p class="loading-text">AI sedang menganalisa...</p>
     <p class="loading-sub">Biasanya membutuhkan 5–10 detik</p>
   </div>
-
+ 
   <!-- Result -->
   <div class="result-card" id="resultCard">
     <div class="status-strip" id="statusStrip"></div>
@@ -638,18 +638,18 @@
     <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
     <p class="disclaimer">📌 Hasil ini dihasilkan oleh AI dan bersifat indikasi, bukan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
   </div>
-
  
-
+ 
+ 
 <script>
   // ─── STATE ───────────────────────────────────────────────────────────────
   const MAX_PER_DAY = 5;
   let mode = 'link';
-
+ 
   function getToday() {
     return new Date().toISOString().split('T')[0];
   }
-
+ 
   function getUsage() {
     const stored = localStorage.getItem('amankan_usage');
     if (!stored) return { date: getToday(), count: 0 };
@@ -657,15 +657,15 @@
     if (data.date !== getToday()) return { date: getToday(), count: 0 };
     return data;
   }
-
+ 
   function saveUsage(count) {
     localStorage.setItem('amankan_usage', JSON.stringify({ date: getToday(), count }));
   }
-
+ 
   function getRemainingChecks() {
     return MAX_PER_DAY - getUsage().count;
   }
-
+ 
   // ─── UI INIT ─────────────────────────────────────────────────────────────
   function renderLimitUI() {
     const remaining = getRemainingChecks();
@@ -675,7 +675,7 @@
     const exhaustedEl = document.getElementById('limitExhausted');
     const mainForm = document.getElementById('mainForm');
     const limitBar = document.getElementById('limitBar');
-
+ 
     // Render pips
     pipsEl.innerHTML = '';
     for (let i = 0; i < MAX_PER_DAY; i++) {
@@ -683,9 +683,9 @@
       pip.className = 'pip' + (i < remaining ? ' active' : '');
       pipsEl.appendChild(pip);
     }
-
+ 
     countEl.textContent = `${remaining}/${MAX_PER_DAY}`;
-
+ 
     if (remaining === 0) {
       exhaustedEl.style.display = 'block';
       mainForm.style.display = 'none';
@@ -697,7 +697,7 @@
       warningEl.style.display = 'none';
     }
   }
-
+ 
   // ─── MODE TOGGLE ─────────────────────────────────────────────────────────
   function setMode(m) {
     mode = m;
@@ -717,17 +717,17 @@
     document.getElementById('inputField').value = '';
     updateCharCount();
   }
-
+ 
   function updateCharCount() {
     const len = document.getElementById('inputField').value.length;
     document.getElementById('charCount').textContent = `${len} / 3000`;
   }
-
+ 
   function clearInput() {
     document.getElementById('inputField').value = '';
     updateCharCount();
   }
-
+ 
   // ─── PRIVACY MASKING ─────────────────────────────────────────────────────
   function maskPrivateData(text) {
     // Mask phone numbers
@@ -736,13 +736,13 @@
     text = text.replace(/([a-zA-Z0-9._%+-]{2})[a-zA-Z0-9._%+-]+(@[a-zA-Z0-9.-]+)/g, '$1***$2');
     return text;
   }
-
+ 
   // ─── RISK KEYWORDS ───────────────────────────────────────────────────────
   function quickRiskCheck(input) {
     const lower = input.toLowerCase();
     const highKeywords = ['transfer', 'hadiah', 'klik sekarang', 'selamat anda menang', 'verifikasi akun', 'atm', 'pin', 'password', 'rekening', 'dana gratis', 'click here', 'claim now', 'free gift', 'winner', 'lucky'];
     const suspiciousDomains = ['.xyz', '.tk', '.ml', '.ga', '.cf', 'bit.ly', 'tinyurl', 'shorturl', 'free-', 'hadiah', 'lucky', 'winner', 'kemenangan'];
-
+ 
     let risk = 'LOW';
     for (const k of highKeywords) {
       if (lower.includes(k)) { risk = 'HIGH'; break; }
@@ -754,126 +754,257 @@
     }
     return risk;
   }
-
+ 
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
     const input = document.getElementById("inputField").value.trim();
-
-
+ 
+ 
   if (!input) {
     alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
     return;
     }
-
+ 
     if (input.length < 5) {
       alert('Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
       return;
     }
     const type = mode;
-const result = "checked";
-
-try {
- await  saveToDatabase(input, type, result);
-} catch (e) {
-  console.log("DB error:", e);
-}
-
+ 
 const remaining = getRemainingChecks();
 if (remaining <= 0) {
   renderLimitUI();
   return;
 }
-
+ 
     
-
+ 
     // Sanitize
     const safeInput = maskPrivateData(input);
     const quickRisk = quickRiskCheck(input);
-
+ 
     // UI state: loading
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Menganalisa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
     document.getElementById('resultCard').style.display = 'none';
-
+ 
     try {
-  let score = 80;
-  const confidence = score + "% yakin";    
-let reasons = [];
-let suggestions = [];
-
-const text = input.toLowerCase();
-
-// 🚨 kata bahaya
-if (text.includes("hadiah") || text.includes("gratis")) {
-  score -= 30;
-  reasons.push("Mengandung kata penipuan seperti 'hadiah/gratis'");
-}
-
-if (text.includes("login") || text.includes("verifikasi")) {
-  score -= 25;
-  reasons.push("Meminta login atau verifikasi mencurigakan");
-}
-
-if (text.includes("klik sekarang") || text.includes("buruan")) {
-  score -= 20;
-  reasons.push("Mengandung urgensi tinggi (teknik scam)");
-}
-
-// 🟡 domain aneh
-if (text.includes(".xyz") || text.includes("bit.ly")) {
-  score -= 15;
-  reasons.push("Menggunakan domain/link pendek mencurigakan");
-}
-
-// 🟢 kalau nggak ada masalah
-if (reasons.length === 0) {
-  reasons.push("Tidak ditemukan indikasi mencurigakan");
-}
-
-// 📊 tentuin status
-let status;
-if (score > 75) {
-  status = "aman";
-} else if (score > 50) {
-  status = "warning";
-} else {
-  status = "danger";
-}
-
-// 💡 saran
-if (status === "danger") {
-  suggestions = ["Jangan klik link", "Laporkan sebagai penipuan"];
-} else if (status === "warning") {
-  suggestions = ["Cek ulang sumber", "Jangan isi data pribadi"];
-} else {
-  suggestions = ["Tetap waspada jika diminta informasi sensitif"];
-}
-
-// 🧾 summary
-let summary;
-let singkat;
-
-  summary = "Link terlihat aman dan tidak ditemukan indikasi mencurigakan.";
-  singkat = "Aman, tapi tetap jangan asal isi data pribadi.";
-} else if (status === "warning") {
-  summary = "Link ini perlu kehati-hatian karena terdapat beberapa indikasi mencurigakan.";
-  singkat = "Masih abu-abu, jangan langsung percaya.";
-} else {
-  summary = "Link ini berpotensi penipuan dan sangat disarankan untuk dihindari.";
-  singkat = "Bahaya, mending skip aja.";
-}
-
-// 🎯 final data
-const data = const data = analyzeInput(input);
-     
+  // ─── SISTEM SKOR BERBASIS BOBOT ──────────────────────────────────────────
+  let score = 90;
+  let reasons = [];
+  let suggestions = [];
+  let dangerCount = 0;
+ 
+  const text = input.toLowerCase();
+ 
+  // Kata bahaya — bobot tinggi
+  if (text.includes("transfer")) {
+    score -= 25; dangerCount++;
+    reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
+  }
+  if (text.includes("hadiah")) {
+    score -= 25; dangerCount++;
+    reasons.push("Iming-iming hadiah terdeteksi — teknik social engineering klasik");
+  }
+  if (text.includes("gratis")) {
+    score -= 25; dangerCount++;
+    reasons.push("Penawaran gratis yang tidak jelas sumbernya — sering digunakan penipu");
+  }
+  if (text.includes("otp")) {
+    score -= 25; dangerCount++;
+    reasons.push("Permintaan kode OTP — tidak pernah diminta oleh layanan resmi");
+  }
+  if (text.includes("password")) {
+    score -= 25; dangerCount++;
+    reasons.push("Meminta password — layanan sah tidak pernah meminta password Anda");
+  }
+ 
+  // Kata urgensi — bobot sedang
+  if (text.includes("klik sekarang")) {
+    score -= 15; dangerCount++;
+    reasons.push("Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis");
+  }
+  if (text.includes("buruan")) {
+    score -= 15; dangerCount++;
+    reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
+  }
+  if (text.includes("terakhir")) {
+    score -= 15; dangerCount++;
+    reasons.push("Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir");
+  }
+  if (text.includes("cepat")) {
+    score -= 15; dangerCount++;
+    reasons.push("Dorongan untuk bertindak cepat — pola manipulasi yang umum dipakai penipu");
+  }
+ 
+  // Domain & link mencurigakan
+  if (text.includes(".xyz")) {
+    score -= 20; dangerCount++;
+    reasons.push("Domain .xyz terdeteksi — sering digunakan untuk situs penipuan");
+  }
+  if (text.includes("bit.ly")) {
+    score -= 20; dangerCount++;
+    reasons.push("Link dipersingkat dengan bit.ly — menyembunyikan tujuan asli URL");
+  }
+  if (text.includes("tinyurl")) {
+    score -= 20; dangerCount++;
+    reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
+  }
+ 
+  // Domain terpercaya — bonus poin
+  if (text.includes("google.com")) {
+    score += 10;
+    reasons.push("Mengandung domain Google yang terverifikasi");
+  }
+  if (text.includes("tokopedia.com")) {
+    score += 10;
+    reasons.push("Mengandung domain Tokopedia yang terverifikasi");
+  }
+  if (text.includes("shopee.co.id")) {
+    score += 10;
+    reasons.push("Mengandung domain Shopee resmi yang terverifikasi");
+  }
+ 
+  // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
+  if (dangerCount >= 2) {
+    score -= 10;
+    reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
+  }
+ 
+  // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
+  const totalChars = input.length;
+  const upperChars = (input.match(/[A-Z]/g) || []).length;
+  if (totalChars > 0 && (upperChars / totalChars) > 0.5) {
+    score -= 10;
+    reasons.push("Lebih dari 50% teks ditulis kapital — pola intimidasi atau spam");
+  }
+ 
+  const exclCount = (input.match(/!/g) || []).length;
+  if (exclCount > 3) {
+    score -= 10;
+    reasons.push(`Tanda seru berlebihan (${exclCount}x) — teknik sensasionalisasi tipuan`);
+  }
+ 
+  const ajakanKata = ["klik", "transfer", "hubungi", "balas", "tekan", "buka", "klaim"];
+  const adaAjakan = ajakanKata.some(k => text.includes(k));
+  if (totalChars < 15 && adaAjakan) {
+    score -= 10;
+    reasons.push("Pesan sangat pendek namun langsung berisi ajakan — pola pesan phishing");
+  }
+ 
+  // ─── NORMALISASI SKOR ────────────────────────────────────────────────────
+  score = Math.max(10, Math.min(95, score));
+ 
+  // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
+  let status;
+  if (score >= 80) {
+    status = "aman";
+  } else if (score >= 50) {
+    status = "warning";
+  } else {
+    status = "danger";
+  }
+ 
+  // ─── CONFIDENCE ──────────────────────────────────────────────────────────
+  const randomVariance = Math.floor(Math.random() * 11) - 5; // -5 sampai +5
+  let confidence = Math.max(10, Math.min(95, score + randomVariance));
+ 
+  // ─── REASONS FALLBACK ────────────────────────────────────────────────────
+  if (reasons.length === 0) {
+    reasons.push("Tidak ditemukan indikasi mencurigakan pada teks ini");
+    reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola penipuan");
+  }
+ 
+  // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
+  if (status === "danger") {
+    suggestions = [
+      "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
+      "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
+      "Laporkan pesan ini ke pihak berwenang atau platform terkait",
+      "Blokir pengirim dan hapus pesan tersebut"
+    ];
+  } else if (status === "warning") {
+    suggestions = [
+      "Verifikasi langsung ke nomor resmi atau website resmi perusahaan",
+      "Jangan isi formulir atau data pribadi sebelum yakin keasliannya",
+      "Konsultasikan dengan orang terpercaya sebelum mengambil tindakan",
+      "Gunakan pencarian Google untuk cek reputasi pengirim atau domain"
+    ];
+  } else {
+    suggestions = [
+      "Tetap waspada jika ada permintaan data sensitif di langkah berikutnya",
+      "Verifikasi selalu jika ada transaksi keuangan meski dari sumber yang terlihat aman",
+      "Pastikan URL yang dikunjungi menggunakan HTTPS dan domain resmi"
+    ];
+  }
+ 
+  // ─── SUMMARY VARIATIF ────────────────────────────────────────────────────
+  const summaryOptions = {
+    aman: [
+      "Tidak ditemukan indikasi kuat yang mengarah ke penipuan, namun tetap disarankan untuk berhati-hati.",
+      "Konten terlihat normal tanpa pola mencurigakan, tetapi kewaspadaan tetap diperlukan.",
+      "Tidak ada tanda penipuan yang jelas, namun tetap hindari membagikan data sensitif."
+    ],
+    warning: [
+      "Terdapat beberapa indikasi yang perlu diwaspadai, sebaiknya lakukan verifikasi tambahan.",
+      "Struktur pesan menunjukkan pola yang meragukan, jangan langsung percaya.",
+      "Ada beberapa elemen mencurigakan, disarankan untuk tidak terburu-buru mengambil tindakan."
+    ],
+    danger: [
+      "Terdeteksi pola yang sangat mirip dengan penipuan digital, sangat disarankan untuk menghindari.",
+      "Konten mengandung banyak indikator berbahaya, jangan melakukan interaksi apapun.",
+      "Risiko penipuan tinggi, sebaiknya abaikan dan jangan klik link yang diberikan."
+    ]
+  };
+ 
+  const singkatOptions = {
+    aman: [
+      "Aman, tapi tetap jangan asal isi data pribadi.",
+      "Terlihat aman, namun selalu verifikasi jika ragu.",
+      "Tidak mencurigakan, tapi kewaspadaan tidak ada salahnya."
+    ],
+    warning: [
+      "Masih abu-abu, jangan langsung percaya.",
+      "Ada yang aneh, cek dulu ke sumber resminya.",
+      "Hati-hati, jangan terburu-buru ambil tindakan."
+    ],
+    danger: [
+      "Bahaya, mending skip dan abaikan saja.",
+      "Sangat berisiko, jangan berinteraksi sama sekali.",
+      "Jangan percaya, ini kemungkinan besar penipuan."
+    ]
+  };
+ 
+  const rndIdx = (arr) => Math.floor(Math.random() * arr.length);
+  const summary = summaryOptions[status][rndIdx(summaryOptions[status])];
+  const singkat = singkatOptions[status][rndIdx(singkatOptions[status])];
+ 
+  // ─── FINAL DATA ──────────────────────────────────────────────────────────
+  const data = {
+    status: status,
+    score: score,
+    confidence: confidence,
+    reasons: reasons,
+    suggestions: suggestions,
+    summary: summary,
+    singkat: singkat
+  };
+ 
+  // Simpan hasil analisis ke Supabase
+  try {
+    await saveToDatabase(input, type, data);
+  } catch (e) {
+    console.log("DB error:", e);
+  }
+ 
       // Consume 1 usage
       const usage = getUsage();
       saveUsage(usage.count + 1);
-
+ 
       renderResult(data);
       renderLimitUI();
-
+ 
     } catch (err) {
       console.error(err);
       // Fallback result if API fails
@@ -887,10 +1018,10 @@ const data = const data = analyzeInput(input);
       document.getElementById('ctaBtn').textContent = 'Amankan Sekarang 🛡️';
     }
   }
-
+ 
   function renderResult(data) {
    let level;
-
+ 
 if (data.status === "aman") {
   level = "LOW";
 } else if (data.status === "warning") {
@@ -899,25 +1030,25 @@ if (data.status === "aman") {
   level = "HIGH";
 }
     const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
-
+ 
     const statusMap = {
       LOW: '🟢 AMAN — TIDAK TERDETEKSI PENIPUAN',
       MEDIUM: '⚠️ PERLU HATI-HATI',
       HIGH: '🚨 BERBAHAYA — JANGAN DIBUKA'
     };
-
+ 
     document.getElementById('statusStrip').className = `status-strip ${cssClass}`;
     document.getElementById('resultStatus').className = `result-status ${cssClass}`;
     document.getElementById('resultStatus').textContent = statusMap[level];
     document.getElementById('resultSummary').textContent = data.summary || '';
-
+ 
     const fill = document.getElementById('confidenceFill');
     const label = document.getElementById('confidenceLabel');
     fill.className = `confidence-fill ${cssClass}`;
     label.className = `confidence-label ${cssClass}`;
     label.textContent = `${data.confidence || 80}% yakin ${level === 'LOW' ? 'aman' : level === 'MEDIUM' ? 'perlu hati-hati' : 'berbahaya'}`;
     setTimeout(() => { fill.style.width = (data.confidence || 80) + '%'; }, 100);
-
+ 
     const reasonsList = document.getElementById('reasonsList');
     reasonsList.innerHTML = '';
     (data.reasons || []).forEach(r => {
@@ -926,7 +1057,7 @@ if (data.status === "aman") {
       li.innerHTML = `<span class="icon">${icon}</span> ${r}`;
       reasonsList.appendChild(li);
     });
-
+ 
     const suggestionsList = document.getElementById('suggestionsList');
     suggestionsList.innerHTML = '';
     (data.suggestions || []).forEach(s => {
@@ -934,15 +1065,15 @@ if (data.status === "aman") {
       li.innerHTML = `<span class="icon">•</span> ${s}`;
       suggestionsList.appendChild(li);
     });
-
+ 
     const singkat = document.getElementById('singkat');
     singkat.className = `result-singkat ${cssClass}`;
     singkat.textContent = '👉 Singkatnya: ' + (data.singkat || '');
-
+ 
     document.getElementById('resultCard').style.display = 'block';
     document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-
+ 
   function renderFallback(quickRisk) {
     const fallbacks = {
       HIGH: {
@@ -972,56 +1103,87 @@ if (data.status === "aman") {
     };
     renderResult(fallbacks[quickRisk] || fallbacks.MEDIUM);
   }
-
+ 
   function resetForm() {
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('inputField').value = '';
     updateCharCount();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
+ 
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+ 
 <script>
 const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
 const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
-
+ 
 if (!window.supabaseClient) {
   window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 }
-
+ 
 var supabase = window.supabaseClient;
-  async function saveToDatabase(input, type, result) {
-  const { data, error } = await supabase
-    .from('scans')
-    .insert([
-      {
-        input: input,
-        type: type,
-        result: result
-      }
-    ]);
-
-  if (error) {
-    console.log("Supabase error:", error);
-  } else {
-    console.log("Data saved:", data);
+ 
+async function saveToDatabase(input, type, data) {
+  try {
+    const { error } = await supabase
+      .from('scans')
+      .insert([
+        {
+          input: input,
+          type: type,
+          status: data.status,
+          score: data.score,
+          confidence: data.confidence,
+          summary: data.summary,
+          singkat: data.singkat,
+          created_at: new Date().toISOString()
+        }
+      ]);
+    if (error) {
+      console.log("Supabase error:", error);
+    }
+  } catch (e) {
+    console.log("saveToDatabase exception:", e);
   }
 }
-function analyzeInput(input) {
-  return {
-    status: "safe",
-    score: 85,
-    confidence: "85% yakin",
-    reasons: ["Tidak ditemukan indikasi mencurigakan"],
-    suggestions: ["Tetap waspada ya"],
-    summary: "Link terlihat aman.",
-    singkat: "Aman"
-  };
+ 
+async function trackVisitor() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+ 
+    const { data: existing, error: fetchError } = await supabase
+      .from('visitors')
+      .select('id, count')
+      .eq('date', today)
+      .single();
+ 
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.log("trackVisitor fetch error:", fetchError);
+      return;
+    }
+ 
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('visitors')
+        .update({ count: existing.count + 1 })
+        .eq('id', existing.id);
+      if (updateError) console.log("trackVisitor update error:", updateError);
+    } else {
+      const { error: insertError } = await supabase
+        .from('visitors')
+        .insert([{ date: today, count: 1 }]);
+      if (insertError) console.log("trackVisitor insert error:", insertError);
+    }
+  } catch (e) {
+    console.log("trackVisitor exception:", e);
+  }
 }
+ 
+// Panggil saat halaman pertama kali dibuka
+trackVisitor();
 </script>
 </body>
 </html>
