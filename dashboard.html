@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard AMANKAN</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      background: #0a0b0f;
+      color: white;
+      font-family: Arial;
+      padding: 30px;
+    }
+    h1 { color: #3dffa0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #333;
+      padding: 10px;
+    }
+
+    th {
+      background: #13151c;
+    }
+
+    tr:hover {
+      background: #1c1f2a;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📊 Dashboard AMANKAN</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Status</th>
+      <th>Score</th>
+      <th>Confidence</th>
+      <th>Waktu</th>
+    </tr>
+  </thead>
+  <tbody id="data"></tbody>
+</table>
+
+<script>
+const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
+const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+async function loadData() {
+  const { data, error } = await supabase
+    .from("scans")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  const table = document.getElementById("data");
+
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${row.input}</td>
+      <td>${row.status}</td>
+      <td>${row.score}</td>
+      <td>${row.confidence}</td>
+      <td>${new Date(row.created_at).toLocaleString()}</td>
+    `;
+
+    table.appendChild(tr);
+  });
+}
+
+loadData();
+</script>
+
+</body>
+</html>
