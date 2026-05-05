@@ -754,6 +754,42 @@
     }
     return risk;
   }
+  // ─── AUTO LEARNING SYSTEM ─────────────────────────
+let learnedKeywords = [];
+
+async function loadLearnedPatterns() {
+  try {
+    const { data, error } = await supabase
+      .from("scans")
+      .select("input, status")
+      .eq("status", "danger")
+      .limit(100);
+
+    if (error) {
+      console.log("learning error:", error);
+      return;
+    }
+
+    let wordFreq = {};
+
+    data.forEach(row => {
+      const words = row.input.toLowerCase().split(/\W+/);
+
+      words.forEach(w => {
+        if (w.length > 4) {
+          wordFreq[w] = (wordFreq[w] || 0) + 1;
+        }
+      });
+    });
+
+    learnedKeywords = Object.keys(wordFreq).filter(w => wordFreq[w] >= 3);
+
+    console.log("🔥 Learned keywords:", learnedKeywords);
+
+  } catch (e) {
+    console.log("learning exception:", e);
+  }
+}
  
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
@@ -797,6 +833,14 @@ if (remaining <= 0) {
   let dangerCount = 0;
  
   const text = input.toLowerCase();
+      // ─── APPLY LEARNED PATTERNS ──────────────────────
+learnedKeywords.forEach(word => {
+  if (text.includes(word)) {
+    score -= 10;
+    dangerCount++;
+    reasons.push(`Mengandung pola yang sering muncul dalam scam: "${word}"`);
+  }
+});
  
   // Kata bahaya — bobot tinggi
   // ─── JOB SCAM DETECTION ─────────────────────────
@@ -1173,6 +1217,7 @@ if (data.status === "aman") {
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
+  loadLearnedPatterns();
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
