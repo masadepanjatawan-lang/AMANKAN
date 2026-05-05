@@ -778,20 +778,7 @@ async function loadLearnedPatterns() {
     console.log("exception:", e);
   }
 }
-    data.forEach(row => {
-      const words = row.input.toLowerCase().split(/\W+/);
-
-      words.forEach(w => {
-        if (w.length > 4) {
-          wordFreq[w] = (wordFreq[w] || 0) + 1;
-        }
-      });
-    });
-
-    learnedKeywords = Object.keys(wordFreq).filter(w => wordFreq[w] >= 2);
-
-    console.log("🔥 Learned keywords:", learnedKeywords);
-
+    
   } catch (e) {
     console.log("learning exception:", e);
   }
