@@ -808,9 +808,9 @@ if (text.includes("deposit")) {
 }
 
 // gaji mencurigakan
-if (text.includes("gaji")) {
+if (text.includes("gaji") && (text.includes("kerja") || text.includes("online"))) {
   score -= 15; dangerCount++;
-  reasons.push("Menawarkan gaji dalam konteks mencurigakan");
+  reasons.push("Penawaran gaji dalam konteks kerja mencurigakan");
 }
 
 // kerja online
@@ -838,12 +838,16 @@ if (text.includes("biaya admin")) {
 
 // tanpa pengalaman
 if (text.includes("tanpa pengalaman")) {
-  score -= 10; dangerCount++;
+  score -= 15; dangerCount++;
   reasons.push("Menawarkan kerja tanpa pengalaman — sering dipakai dalam scam");
 }
 
 // langsung cair
-if (text.includes("langsung cair")) {
+if (
+  text.includes("langsung cair") ||
+  text.includes("langsung dibayar") ||
+  text.includes("langsung dapat")
+) {
   score -= 15; dangerCount++;
   reasons.push("Janji hasil instan — indikasi tidak realistis");
 }
@@ -950,7 +954,7 @@ if (
   }
  
   // ─── NORMALISASI SKOR ────────────────────────────────────────────────────
-  score = Math.max(10, Math.min(95, score));
+  score = Math.max(20, Math.min(95, score));
  
   // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
   let status;
