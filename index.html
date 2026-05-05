@@ -902,6 +902,14 @@ if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
     score -= 10;
     reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
   }
+      // KOMBINASI KHUSUS JOB SCAM
+if (
+  text.includes("deposit") &&
+  (text.includes("gaji") || text.includes("kerja"))
+) {
+  score -= 30;
+  reasons.push("Kombinasi deposit + iming-iming kerja/gaji — sangat khas penipuan");
+}
  
   // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
   const totalChars = input.length;
