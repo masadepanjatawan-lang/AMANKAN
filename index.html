@@ -782,7 +782,7 @@ async function loadLearnedPatterns() {
       });
     });
 
-    learnedKeywords = Object.keys(wordFreq).filter(w => wordFreq[w] >= 3);
+    learnedKeywords = Object.keys(wordFreq).filter(w => wordFreq[w] >= 2);
 
     console.log("🔥 Learned keywords:", learnedKeywords);
 
