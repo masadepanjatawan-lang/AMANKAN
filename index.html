@@ -1217,7 +1217,6 @@ if (data.status === "aman") {
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
-  loadLearnedPatterns();
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
@@ -1230,6 +1229,8 @@ if (!window.supabaseClient) {
 }
  
 var supabase = window.supabaseClient;
+  // 🔥 PANGGIL SETELAH SUPABASE SIAP
+loadLearnedPatterns();
  
 async function saveToDatabase(input, type, data) {
   try {
