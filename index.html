@@ -1077,7 +1077,43 @@
         score -= 20; dangerCount++;
         reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
       }
- 
+       // ─── APK / FILE SCAM DETECTION ─────────────────────────
+
+      if (text.includes(".apk")) {
+        score -= 45;
+        dangerCount++;
+        reasons.push("File APK terdeteksi — sangat berisiko karena bisa berisi malware atau pencuri data");
+      }
+
+      if (
+        text.includes("kurir") ||
+        text.includes("paket") ||
+        text.includes("resi")
+      ) {
+        if (text.includes(".apk")) {
+          score -= 35;
+          dangerCount++;
+          reasons.push("Kombinasi kurir/paket + file APK sangat mirip modus penipuan malware");
+        }
+      }
+
+      if (
+        text.includes("install aplikasi") ||
+        text.includes("unduh aplikasi")
+      ) {
+        score -= 30;
+        dangerCount++;
+        reasons.push("Meminta install aplikasi dari sumber tidak jelas");
+      }
+
+      if (
+        text.includes("lihat foto paket") ||
+        text.includes("cek paket")
+      ) {
+        score -= 20;
+        dangerCount++;
+        reasons.push("Modus paket bermasalah sering digunakan dalam scam digital");
+      }
       // Domain terpercaya — bonus poin
       if (text.includes("google.com")) {
         score += 10;
