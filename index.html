@@ -333,6 +333,7 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       margin-top: 20px;
+     pointer-events: none;
     }
  
     .spinner {
@@ -831,13 +832,6 @@ if (remaining <= 0) {
   }
 });
       // ─── APPLY LEARNED PATTERNS ──────────────────────
-learnedKeywords.forEach(word => {
-  if (text.includes(word)) {
-    score -= 10;
-    dangerCount++;
-    reasons.push(`Mengandung pola yang sering muncul dalam scam: "${word}"`);
-  }
-});
  
   // Kata bahaya — bobot tinggi
   // ─── JOB SCAM DETECTION ─────────────────────────
@@ -1228,7 +1222,9 @@ if (!window.supabaseClient) {
  
 var supabase = window.supabaseClient;
   // 🔥 PANGGIL SETELAH SUPABASE SIAP
-loadLearnedPatterns();
+window.addEventListener("load", () => {
+  loadLearnedPatterns();
+});
   async function saveLearnedPatterns(input) {
   try {
     const words = input.toLowerCase().split(/\W+/);
