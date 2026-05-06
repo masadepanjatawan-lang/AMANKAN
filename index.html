@@ -321,7 +321,7 @@
  
     .cta-btn:hover:not(:disabled)::before { opacity: 1; }
     .cta-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(61,255,160,0.3); }
-    .cta-btn:active:not(:disabled) { transform: translateY(0); }
+    .cta-btn:active:not(:disabled) { transform:  scale(0.94); }
     .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
  
     /* Loading */
@@ -524,7 +524,16 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
- 
+ @keyframes bounceClick {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.92); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.cta-btn.clicked {
+  animation: bounceClick 0.4s ease;
+}
     /* Footer */
     .footer {
       text-align: center;
@@ -1209,6 +1218,13 @@ if (data.status === "aman") {
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
+  document.getElementById("ctaBtn").addEventListener("click", function () {
+  this.classList.add("clicked");
+
+  setTimeout(() => {
+    this.classList.remove("clicked");
+  }, 400);
+});
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
