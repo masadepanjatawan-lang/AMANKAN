@@ -609,7 +609,7 @@
     </div>
  
     <!-- CTA -->
-    <button class="cta-btn" id="ctaBtn" onclick="analyze()">
+    <button class="cta-btn" id="ctaBtn" onclick="handleClick()">
       Amankan Sekarang 🛡️
     </button>
   </div>
@@ -1218,13 +1218,21 @@ if (data.status === "aman") {
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
-  document.getElementById("ctaBtn").addEventListener("click", function () {
-  this.classList.add("clicked");
+ function handleClick() {
+  const btn = document.getElementById("ctaBtn");
+
+  // animasi dulu
+  btn.classList.add("clicked");
 
   setTimeout(() => {
-    this.classList.remove("clicked");
+    btn.classList.remove("clicked");
   }, 400);
-});
+
+  // baru jalan analyze
+  setTimeout(() => {
+    analyze();
+  }, 100);
+}
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
