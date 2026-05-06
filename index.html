@@ -702,9 +702,18 @@
   function getUsage() {
     const stored = localStorage.getItem('amankan_usage');
     if (!stored) return { date: getToday(), count: 0 };
-    const data = JSON.parse(stored);
-    if (data.date !== getToday()) return { date: getToday(), count: 0 };
-    return data;
+    // BUG FIX #6: Bungkus JSON.parse dengan try-catch karena data di localStorage
+    // bisa rusak atau tidak valid, menyebabkan error yang menghentikan eksekusi
+    try {
+      const data = JSON.parse(stored);
+      if (data.date !== getToday()) return { date: getToday(), count: 0 };
+      return data;
+    } catch (e) {
+      // Jika data rusak/tidak valid, kembalikan nilai default dan bersihkan storage
+      console.warn('localStorage data rusak, mereset usage:', e);
+      localStorage.removeItem('amankan_usage');
+      return { date: getToday(), count: 0 };
+    }
   }
  
   function saveUsage(count) {
@@ -715,21 +724,34 @@
     return MAX_PER_DAY - getUsage().count;
   }
  
+  // BUG FIX #2: Variabel global untuk menyimpan timeout inline message,
+  // mencegah pesan tumpang tindih atau hilang terlalu cepat
+  let inlineMessageTimeout = null;
+ 
   // FIX #9: Fungsi helper untuk menampilkan pesan inline (non-blocking) pengganti alert()
   function showInlineMessage(msg, duration = 3000) {
     const el = document.getElementById('inlineMessage');
     el.textContent = msg;
     el.style.display = 'block';
-    // Auto-sembunyikan setelah durasi tertentu
-    setTimeout(() => { el.style.display = 'none'; }, duration);
+    // BUG FIX #2: Hapus timeout sebelumnya sebelum membuat yang baru,
+    // agar pesan tidak hilang terlalu cepat jika dipanggil berulang kali
+    clearTimeout(inlineMessageTimeout);
+    inlineMessageTimeout = setTimeout(() => { el.style.display = 'none'; }, duration);
   }
+ 
+  // BUG FIX #3: Variabel global untuk menyimpan timeout DB toast,
+  // mencegah beberapa toast aktif sekaligus
+  let dbToastTimeout = null;
  
   // FIX #8: Fungsi toast ringan untuk notifikasi error DB
   function showDbToast(msg, duration = 4000) {
     const toast = document.getElementById('dbToast');
     toast.textContent = msg;
     toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, duration);
+    // BUG FIX #3: Hapus timeout sebelumnya sebelum membuat yang baru
+    // agar hanya satu toast aktif dalam satu waktu
+    clearTimeout(dbToastTimeout);
+    dbToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
   }
  
   // ─── UI INIT ─────────────────────────────────────────────────────────────
@@ -895,6 +917,21 @@
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Menganalisa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
+ 
+    // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
+    // pada koneksi lambat — tanpa mengubah struktur HTML loading state
+    const loadingMessages = [
+      'AI sedang menganalisa...',
+      'Memeriksa pola penipuan...',
+      'Mencocokkan database scam...',
+      'Hampir selesai...'
+    ];
+    let loadingMsgIndex = 0;
+    const loadingTextEl = document.querySelector('#loadingState .loading-text');
+    const loadingInterval = setInterval(() => {
+      loadingMsgIndex = (loadingMsgIndex + 1) % loadingMessages.length;
+      if (loadingTextEl) loadingTextEl.textContent = loadingMessages[loadingMsgIndex];
+    }, 2500);
  
     // FIX #10: Sembunyikan hasil lama sebelum proses baru dimulai
     document.getElementById('resultCard').style.display = 'none';
@@ -1216,6 +1253,10 @@
       saveUsage(usage.count + 1);
       renderLimitUI();
     } finally {
+      // BUG FIX #7: Hentikan rotasi teks loading dan kembalikan ke teks semula
+      clearInterval(loadingInterval);
+      if (loadingTextEl) loadingTextEl.textContent = 'AI sedang menganalisa...';
+ 
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('ctaBtn').disabled = false;
       document.getElementById('ctaBtn').textContent = 'Amankan Sekarang 🛡️';
@@ -1276,7 +1317,9 @@
     singkat.textContent = '👉 Singkatnya: ' + (data.singkat || '');
  
     document.getElementById('resultCard').style.display = 'block';
-    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // BUG FIX #5: Ubah block dari 'start' ke 'center' agar tampilan tidak melompat
+    // terlalu tinggi pada perangkat mobile — posisi hasil analisa lebih nyaman di tengah layar
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
  
   function renderFallback(quickRisk) {
@@ -1320,8 +1363,12 @@
   renderLimitUI();
  
   function handleClick() {
-    // FIX #1: Blokir klik jika sedang dalam proses analisa
+    // BUG FIX #1: Blokir klik ganda — cek flag di awal
     if (isProcessing) return;
+ 
+    // BUG FIX #1: Aktifkan isProcessing SEBELUM setTimeout,
+    // sehingga klik cepat berikutnya langsung diblokir tanpa menunggu delay
+    isProcessing = true;
  
     const btn = document.getElementById("ctaBtn");
  
@@ -1359,9 +1406,23 @@
   // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
   async function saveLearnedPatterns(input) {
     try {
-      // Ambil kata-kata yang cukup panjang (> 4 huruf)
+      // BUG FIX #4: Daftar kata umum yang tidak relevan (stopwords bahasa Indonesia & Inggris)
+      // Kata-kata ini terlalu generik dan akan merusak akurasi analisa jika disimpan
+      const STOPWORDS = new Set([
+        'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'dengan', 'yang',
+        'dalam', 'tidak', 'akan', 'sudah', 'harus', 'kepada', 'semua', 'lebih',
+        'masih', 'setelah', 'kalau', 'karena', 'sekarang', 'jangan', 'anda',
+        'saya', 'kami', 'mereka', 'kamu', 'namun', 'tetapi', 'juga', 'atau',
+        'dari', 'this', 'that', 'with', 'your', 'have', 'been', 'will', 'from',
+        'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than'
+      ]);
+ 
+      // Ambil kata-kata yang cukup panjang (> 4 huruf) DAN bukan stopwords
       const words = [...new Set(
-        input.toLowerCase().split(/\W+/).filter(w => w.length > 4)
+        input.toLowerCase().split(/\W+/).filter(w =>
+          // BUG FIX #4: Tambahan filter — abaikan kata yang ada di daftar stopwords
+          w.length > 4 && !STOPWORDS.has(w)
+        )
       )];
  
       if (words.length === 0) return;
@@ -1510,4 +1571,3 @@
 </script>
 </body>
 </html>
- 
