@@ -1366,10 +1366,6 @@
     // BUG FIX #1: Blokir klik ganda — cek flag di awal
     if (isProcessing) return;
  
-    // BUG FIX #1: Aktifkan isProcessing SEBELUM setTimeout,
-    // sehingga klik cepat berikutnya langsung diblokir tanpa menunggu delay
-    isProcessing = true;
- 
     const btn = document.getElementById("ctaBtn");
  
     // Animasi bounce tetap berjalan
