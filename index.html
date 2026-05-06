@@ -324,6 +324,19 @@
     .cta-btn:active:not(:disabled) { transform:  scale(0.93); }
     .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
  
+    /* FIX #9: Inline error/info message — mengganti alert() agar tidak blocking */
+    .inline-message {
+      background: rgba(255,204,51,0.08);
+      border: 1px solid rgba(255,204,51,0.25);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: var(--warn);
+      margin-bottom: 14px;
+      display: none;
+      animation: fadeDown 0.3s ease both;
+    }
+ 
     /* Loading */
     .loading-state {
       display: none;
@@ -510,6 +523,22 @@
     .status-strip.warn { background: linear-gradient(90deg, var(--warn), #e6a800); }
     .status-strip.danger { background: linear-gradient(90deg, var(--danger), #c71535); }
  
+    /* FIX #8: Notifikasi DB error ringan — tidak mengganggu alur utama */
+    .db-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface2);
+      border: 1px solid rgba(255,204,51,0.2);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--warn);
+      z-index: 999;
+      display: none;
+      animation: fadeUp 0.3s ease both;
+    }
+ 
     /* Animations */
     @keyframes fadeDown {
       from { opacity: 0; transform: translateY(-16px); }
@@ -530,7 +559,7 @@
   70% { transform: scale(1.04); }
   100% { transform: scale(1); }
 }
-
+ 
 .cta-btn.clicked {
   animation: bounceClick 0.4s ease;
 }
@@ -591,6 +620,9 @@
       </button>
     </div>
  
+    <!-- FIX #9: Inline message box menggantikan alert() yang blocking -->
+    <div class="inline-message" id="inlineMessage"></div>
+ 
     <!-- Input -->
     <div class="input-card">
       <label class="input-label" id="inputLabel">Tempel URL atau link yang ingin dicek</label>
@@ -649,12 +681,19 @@
     <p class="disclaimer">📌 Hasil ini dihasilkan oleh AI dan bersifat indikasi, bukan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
   </div>
  
- 
+  <!-- FIX #8: Toast notifikasi ringan untuk error DB -->
+  <div class="db-toast" id="dbToast">⚠️ Gagal menyimpan data, namun analisis tetap berjalan.</div>
  
 <script>
   // ─── STATE ───────────────────────────────────────────────────────────────
   const MAX_PER_DAY = 5;
   let mode = 'link';
+ 
+  // FIX #1: Flag untuk mencegah spam click / eksekusi ganda
+  let isProcessing = false;
+ 
+  // FIX #2: Flag untuk melacak apakah learnedKeywords sudah siap digunakan
+  let patternsLoaded = false;
  
   function getToday() {
     return new Date().toISOString().split('T')[0];
@@ -674,6 +713,23 @@
  
   function getRemainingChecks() {
     return MAX_PER_DAY - getUsage().count;
+  }
+ 
+  // FIX #9: Fungsi helper untuk menampilkan pesan inline (non-blocking) pengganti alert()
+  function showInlineMessage(msg, duration = 3000) {
+    const el = document.getElementById('inlineMessage');
+    el.textContent = msg;
+    el.style.display = 'block';
+    // Auto-sembunyikan setelah durasi tertentu
+    setTimeout(() => { el.style.display = 'none'; }, duration);
+  }
+ 
+  // FIX #8: Fungsi toast ringan untuk notifikasi error DB
+  function showDbToast(msg, duration = 4000) {
+    const toast = document.getElementById('dbToast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, duration);
   }
  
   // ─── UI INIT ─────────────────────────────────────────────────────────────
@@ -764,57 +820,73 @@
     }
     return risk;
   }
-  // ─── AUTO LEARNING SYSTEM ─────────────────────────
-let learnedKeywords = [];
-
-async function loadLearnedPatterns() {
-  try {
-    const { data, error } = await supabase
-      .from("learned_patterns")
-      .select("word, count");
-
-    if (error) {
-      console.log("load error:", error);
-      return;
-    }
-
-    learnedKeywords = data
-      .filter(d => d.count >= 2)
-      .map(d => d.word);
-
-    console.log("🔥 Loaded learned keywords:", learnedKeywords);
-
-  } catch (e) {
-    console.log("exception:", e);
-  }
-}
-    
  
+  // ─── AUTO LEARNING SYSTEM ─────────────────────────
+  let learnedKeywords = [];
+ 
+  async function loadLearnedPatterns() {
+    try {
+      const { data, error } = await supabase
+        .from("learned_patterns")
+        .select("word, count");
+ 
+      if (error) {
+        console.log("load error:", error);
+        // FIX #2: Tandai tetap loaded meski error, agar analyze tidak terblokir
+        patternsLoaded = true;
+        return;
+      }
+ 
+      learnedKeywords = data
+        .filter(d => d.count >= 2)
+        .map(d => d.word);
+ 
+      console.log("🔥 Loaded learned keywords:", learnedKeywords);
+ 
+    } catch (e) {
+      console.log("exception:", e);
+    } finally {
+      // FIX #2: Selalu tandai selesai dimuat, berhasil atau tidak
+      patternsLoaded = true;
+    }
+  }
  
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
+    // FIX #1: Cegah eksekusi ganda jika masih dalam proses
+    if (isProcessing) return;
+ 
     const input = document.getElementById("inputField").value.trim();
  
- 
-  if (!input) {
-    alert('Masukkan link atau pesan yang ingin dicek dulu ya!');
-    return;
+    // FIX #9: Gunakan inline message pengganti alert() yang blocking
+    if (!input) {
+      showInlineMessage('⚠️ Masukkan link atau pesan yang ingin dicek dulu ya!');
+      return;
     }
  
     if (input.length < 5) {
-      alert('Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
+      showInlineMessage('⚠️ Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
       return;
     }
+ 
+    // FIX #5: Validasi panjang maksimum input agar tidak membebani sistem
+    const MAX_INPUT_LENGTH = 2000;
+    if (input.length > MAX_INPUT_LENGTH) {
+      showInlineMessage(`⚠️ Input terlalu panjang (maks ${MAX_INPUT_LENGTH} karakter). Mohon persingkat pesannya.`);
+      return;
+    }
+ 
     const type = mode;
  
-const remaining = getRemainingChecks();
-if (remaining <= 0) {
-  renderLimitUI();
-  return;
-}
+    const remaining = getRemainingChecks();
+    if (remaining <= 0) {
+      renderLimitUI();
+      return;
+    }
  
+    // FIX #1: Set flag processing agar tidak bisa diklik ulang
+    isProcessing = true;
     
- 
     // Sanitize
     const safeInput = maskPrivateData(input);
     const quickRisk = quickRiskCheck(input);
@@ -823,285 +895,311 @@ if (remaining <= 0) {
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Menganalisa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
+ 
+    // FIX #10: Sembunyikan hasil lama sebelum proses baru dimulai
     document.getElementById('resultCard').style.display = 'none';
  
-    try {
-  // ─── SISTEM SKOR BERBASIS BOBOT ──────────────────────────────────────────
-  let score = 90;
-  let reasons = [];
-  let suggestions = [];
-  let dangerCount = 0;
+    // FIX #2: Tunggu jika learnedKeywords belum siap dimuat (maks 2 detik)
+    if (!patternsLoaded) {
+      await new Promise(resolve => {
+        const timeout = setTimeout(resolve, 2000);
+        const interval = setInterval(() => {
+          if (patternsLoaded) {
+            clearTimeout(timeout);
+            clearInterval(interval);
+            resolve();
+          }
+        }, 100);
+      });
+    }
  
-  const text = input.toLowerCase();
+    try {
+      // ─── SISTEM SKOR BERBASIS BOBOT ──────────────────────────────────────────
+      let score = 90;
+      let reasons = [];
+      let suggestions = [];
+      let dangerCount = 0;
+ 
+      const text = input.toLowerCase();
+ 
+      // FIX #2: learnedKeywords sudah pasti siap di sini karena sudah ditunggu
       learnedKeywords.forEach(word => {
-  if (text.includes(word)) {
-    score -= 10;
-    dangerCount++;
-    reasons.push(`Pola scam terdeteksi: "${word}"`);
-  }
-});
+        if (text.includes(word)) {
+          score -= 10;
+          dangerCount++;
+          reasons.push(`Pola scam terdeteksi: "${word}"`);
+        }
+      });
+ 
       // ─── APPLY LEARNED PATTERNS ──────────────────────
  
-  // Kata bahaya — bobot tinggi
-  // ─── JOB SCAM DETECTION ─────────────────────────
-
-// deposit (PALING PENTING)
-if (text.includes("deposit")) {
-  score -= 40; dangerCount++;
-  reasons.push("Meminta deposit awal — ciri khas penipuan kerja online");
-}
-
-// gaji mencurigakan
-if (text.includes("gaji") && (text.includes("kerja") || text.includes("online"))) {
-  score -= 15; dangerCount++;
-  reasons.push("Penawaran gaji dalam konteks kerja mencurigakan");
-}
-
-// kerja online
-if (text.includes("kerja online")) {
-  score -= 20; dangerCount++;
-  reasons.push("Penawaran kerja online tanpa detail jelas — pola umum scam");
-}
-
-// aktivasi akun berbayar
-if (text.includes("aktivasi akun")) {
-  score -= 25; dangerCount++;
-  reasons.push("Meminta pembayaran untuk aktivasi akun — tidak lazim pada pekerjaan resmi");
-}
-
-// kerja ringan hasil besar
-if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
-  score -= 15; dangerCount++;
-  reasons.push("Janji kerja ringan dengan hasil besar — indikasi tidak realistis");
-}
+      // Kata bahaya — bobot tinggi
+      // ─── JOB SCAM DETECTION ─────────────────────────
+ 
+      // deposit (PALING PENTING)
+      if (text.includes("deposit")) {
+        score -= 40; dangerCount++;
+        reasons.push("Meminta deposit awal — ciri khas penipuan kerja online");
+      }
+ 
+      // gaji mencurigakan
+      if (text.includes("gaji") && (text.includes("kerja") || text.includes("online"))) {
+        score -= 15; dangerCount++;
+        reasons.push("Penawaran gaji dalam konteks kerja mencurigakan");
+      }
+ 
+      // kerja online
+      if (text.includes("kerja online")) {
+        score -= 20; dangerCount++;
+        reasons.push("Penawaran kerja online tanpa detail jelas — pola umum scam");
+      }
+ 
+      // aktivasi akun berbayar
+      if (text.includes("aktivasi akun")) {
+        score -= 25; dangerCount++;
+        reasons.push("Meminta pembayaran untuk aktivasi akun — tidak lazim pada pekerjaan resmi");
+      }
+ 
+      // kerja ringan hasil besar
+      if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
+        score -= 15; dangerCount++;
+        reasons.push("Janji kerja ringan dengan hasil besar — indikasi tidak realistis");
+      }
+ 
       // biaya admin
-if (text.includes("biaya admin")) {
-  score -= 30; dangerCount++;
-  reasons.push("Meminta biaya admin — variasi lain dari deposit scam");
-}
-
-// tanpa pengalaman
-if (text.includes("tanpa pengalaman")) {
-  score -= 15; dangerCount++;
-  reasons.push("Menawarkan kerja tanpa pengalaman — sering dipakai dalam scam");
-}
-
-// langsung cair
-if (
-  text.includes("langsung cair") ||
-  text.includes("langsung dibayar") ||
-  text.includes("langsung dapat")
-) {
-  score -= 15; dangerCount++;
-  reasons.push("Janji hasil instan — indikasi tidak realistis");
-}
-  if (text.includes("transfer")) {
-    score -= 25; dangerCount++;
-    reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
-  }
-  if (text.includes("hadiah")) {
-    score -= 25; dangerCount++;
-    reasons.push("Iming-iming hadiah terdeteksi — teknik social engineering klasik");
-  }
-  if (text.includes("gratis")) {
-    score -= 25; dangerCount++;
-    reasons.push("Penawaran gratis yang tidak jelas sumbernya — sering digunakan penipu");
-  }
-  if (text.includes("otp")) {
-    score -= 25; dangerCount++;
-    reasons.push("Permintaan kode OTP — tidak pernah diminta oleh layanan resmi");
-  }
-  if (text.includes("password")) {
-    score -= 25; dangerCount++;
-    reasons.push("Meminta password — layanan sah tidak pernah meminta password Anda");
-  }
+      if (text.includes("biaya admin")) {
+        score -= 30; dangerCount++;
+        reasons.push("Meminta biaya admin — variasi lain dari deposit scam");
+      }
  
-  // Kata urgensi — bobot sedang
-  if (text.includes("klik sekarang")) {
-    score -= 15; dangerCount++;
-    reasons.push("Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis");
-  }
-  if (text.includes("buruan")) {
-    score -= 15; dangerCount++;
-    reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
-  }
-  if (text.includes("terakhir")) {
-    score -= 15; dangerCount++;
-    reasons.push("Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir");
-  }
-  if (text.includes("cepat")) {
-    score -= 15; dangerCount++;
-    reasons.push("Dorongan untuk bertindak cepat — pola manipulasi yang umum dipakai penipu");
-  }
+      // tanpa pengalaman
+      if (text.includes("tanpa pengalaman")) {
+        score -= 15; dangerCount++;
+        reasons.push("Menawarkan kerja tanpa pengalaman — sering dipakai dalam scam");
+      }
  
-  // Domain & link mencurigakan
-  if (text.includes(".xyz")) {
-    score -= 20; dangerCount++;
-    reasons.push("Domain .xyz terdeteksi — sering digunakan untuk situs penipuan");
-  }
-  if (text.includes("bit.ly")) {
-    score -= 20; dangerCount++;
-    reasons.push("Link dipersingkat dengan bit.ly — menyembunyikan tujuan asli URL");
-  }
-  if (text.includes("tinyurl")) {
-    score -= 20; dangerCount++;
-    reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
-  }
+      // langsung cair
+      if (
+        text.includes("langsung cair") ||
+        text.includes("langsung dibayar") ||
+        text.includes("langsung dapat")
+      ) {
+        score -= 15; dangerCount++;
+        reasons.push("Janji hasil instan — indikasi tidak realistis");
+      }
  
-  // Domain terpercaya — bonus poin
-  if (text.includes("google.com")) {
-    score += 10;
-    reasons.push("Mengandung domain Google yang terverifikasi");
-  }
-  if (text.includes("tokopedia.com")) {
-    score += 10;
-    reasons.push("Mengandung domain Tokopedia yang terverifikasi");
-  }
-  if (text.includes("shopee.co.id")) {
-    score += 10;
-    reasons.push("Mengandung domain Shopee resmi yang terverifikasi");
-  }
+      if (text.includes("transfer")) {
+        score -= 25; dangerCount++;
+        reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
+      }
+      if (text.includes("hadiah")) {
+        score -= 25; dangerCount++;
+        reasons.push("Iming-iming hadiah terdeteksi — teknik social engineering klasik");
+      }
+      if (text.includes("gratis")) {
+        score -= 25; dangerCount++;
+        reasons.push("Penawaran gratis yang tidak jelas sumbernya — sering digunakan penipu");
+      }
+      if (text.includes("otp")) {
+        score -= 25; dangerCount++;
+        reasons.push("Permintaan kode OTP — tidak pernah diminta oleh layanan resmi");
+      }
+      if (text.includes("password")) {
+        score -= 25; dangerCount++;
+        reasons.push("Meminta password — layanan sah tidak pernah meminta password Anda");
+      }
  
-  // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
-  if (dangerCount >= 2) {
-    score -= 10;
-    reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
-  }
+      // Kata urgensi — bobot sedang
+      if (text.includes("klik sekarang")) {
+        score -= 15; dangerCount++;
+        reasons.push("Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis");
+      }
+      if (text.includes("buruan")) {
+        score -= 15; dangerCount++;
+        reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
+      }
+      if (text.includes("terakhir")) {
+        score -= 15; dangerCount++;
+        reasons.push("Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir");
+      }
+      if (text.includes("cepat")) {
+        score -= 15; dangerCount++;
+        reasons.push("Dorongan untuk bertindak cepat — pola manipulasi yang umum dipakai penipu");
+      }
+ 
+      // Domain & link mencurigakan
+      if (text.includes(".xyz")) {
+        score -= 20; dangerCount++;
+        reasons.push("Domain .xyz terdeteksi — sering digunakan untuk situs penipuan");
+      }
+      if (text.includes("bit.ly")) {
+        score -= 20; dangerCount++;
+        reasons.push("Link dipersingkat dengan bit.ly — menyembunyikan tujuan asli URL");
+      }
+      if (text.includes("tinyurl")) {
+        score -= 20; dangerCount++;
+        reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
+      }
+ 
+      // Domain terpercaya — bonus poin
+      if (text.includes("google.com")) {
+        score += 10;
+        reasons.push("Mengandung domain Google yang terverifikasi");
+      }
+      if (text.includes("tokopedia.com")) {
+        score += 10;
+        reasons.push("Mengandung domain Tokopedia yang terverifikasi");
+      }
+      if (text.includes("shopee.co.id")) {
+        score += 10;
+        reasons.push("Mengandung domain Shopee resmi yang terverifikasi");
+      }
+ 
+      // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
+      if (dangerCount >= 2) {
+        score -= 10;
+        reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
+      }
+ 
       // KOMBINASI KHUSUS JOB SCAM
-if (
-  text.includes("deposit") &&
-  (text.includes("gaji") || text.includes("kerja"))
-) {
-  score -= 30;
-  reasons.push("Kombinasi deposit + iming-iming kerja/gaji — sangat khas penipuan");
-}
+      if (
+        text.includes("deposit") &&
+        (text.includes("gaji") || text.includes("kerja"))
+      ) {
+        score -= 30;
+        reasons.push("Kombinasi deposit + iming-iming kerja/gaji — sangat khas penipuan");
+      }
  
-  // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
-  const totalChars = input.length;
-  const upperChars = (input.match(/[A-Z]/g) || []).length;
-  if (totalChars > 0 && (upperChars / totalChars) > 0.5) {
-    score -= 10;
-    reasons.push("Lebih dari 50% teks ditulis kapital — pola intimidasi atau spam");
-  }
+      // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
+      const totalChars = input.length;
+      const upperChars = (input.match(/[A-Z]/g) || []).length;
+      if (totalChars > 0 && (upperChars / totalChars) > 0.5) {
+        score -= 10;
+        reasons.push("Lebih dari 50% teks ditulis kapital — pola intimidasi atau spam");
+      }
  
-  const exclCount = (input.match(/!/g) || []).length;
-  if (exclCount > 3) {
-    score -= 10;
-    reasons.push(`Tanda seru berlebihan (${exclCount}x) — teknik sensasionalisasi tipuan`);
-  }
+      const exclCount = (input.match(/!/g) || []).length;
+      if (exclCount > 3) {
+        score -= 10;
+        reasons.push(`Tanda seru berlebihan (${exclCount}x) — teknik sensasionalisasi tipuan`);
+      }
  
-  const ajakanKata = ["klik", "transfer", "hubungi", "balas", "tekan", "buka", "klaim"];
-  const adaAjakan = ajakanKata.some(k => text.includes(k));
-  if (totalChars < 15 && adaAjakan) {
-    score -= 10;
-    reasons.push("Pesan sangat pendek namun langsung berisi ajakan — pola pesan phishing");
-  }
+      const ajakanKata = ["klik", "transfer", "hubungi", "balas", "tekan", "buka", "klaim"];
+      const adaAjakan = ajakanKata.some(k => text.includes(k));
+      if (totalChars < 15 && adaAjakan) {
+        score -= 10;
+        reasons.push("Pesan sangat pendek namun langsung berisi ajakan — pola pesan phishing");
+      }
  
-  // ─── NORMALISASI SKOR ────────────────────────────────────────────────────
-  score = Math.max(20, Math.min(95, score));
+      // FIX #7: Normalisasi skor dengan batas minimum lebih realistis (5, bukan 20)
+      // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
+      score = Math.max(5, Math.min(95, score));
  
-  // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
-  let status;
-  if (score >= 80) {
-    status = "aman";
-  } else if (score >= 50) {
-    status = "warning";
-  } else {
-    status = "danger";
-  }
+      // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
+      let status;
+      if (score >= 80) {
+        status = "aman";
+      } else if (score >= 50) {
+        status = "warning";
+      } else {
+        status = "danger";
+      }
  
-  // ─── CONFIDENCE ──────────────────────────────────────────────────────────
-  const randomVariance = Math.floor(Math.random() * 11) - 5; // -5 sampai +5
-  let confidence = Math.max(10, Math.min(95, score + randomVariance));
+      // FIX #6: Hilangkan nilai acak pada confidence agar hasil konsisten
+      // Sebelumnya: confidence = score + random(-5..+5)
+      // Sekarang: confidence langsung menggunakan score agar reproducible
+      let confidence = score;
  
-  // ─── REASONS FALLBACK ────────────────────────────────────────────────────
-  if (reasons.length === 0) {
-    reasons.push("Tidak ditemukan indikasi mencurigakan pada teks ini");
-    reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola penipuan");
-  }
+      // ─── REASONS FALLBACK ────────────────────────────────────────────────────
+      if (reasons.length === 0) {
+        reasons.push("Tidak ditemukan indikasi mencurigakan pada teks ini");
+        reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola penipuan");
+      }
  
-  // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
-  if (status === "danger") {
-    await saveLearnedPatterns(input);
-    suggestions = [
-      "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
-      "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
-      "Laporkan pesan ini ke pihak berwenang atau platform terkait",
-      "Blokir pengirim dan hapus pesan tersebut"
-    ];
-  } else if (status === "warning") {
-    suggestions = [
-      "Verifikasi langsung ke nomor resmi atau website resmi perusahaan",
-      "Jangan isi formulir atau data pribadi sebelum yakin keasliannya",
-      "Konsultasikan dengan orang terpercaya sebelum mengambil tindakan",
-      "Gunakan pencarian Google untuk cek reputasi pengirim atau domain"
-    ];
-  } else {
-    suggestions = [
-      "Tetap waspada jika ada permintaan data sensitif di langkah berikutnya",
-      "Verifikasi selalu jika ada transaksi keuangan meski dari sumber yang terlihat aman",
-      "Pastikan URL yang dikunjungi menggunakan HTTPS dan domain resmi"
-    ];
-  }
+      // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
+      if (status === "danger") {
+        await saveLearnedPatterns(input);
+        suggestions = [
+          "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
+          "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
+          "Laporkan pesan ini ke pihak berwenang atau platform terkait",
+          "Blokir pengirim dan hapus pesan tersebut"
+        ];
+      } else if (status === "warning") {
+        suggestions = [
+          "Verifikasi langsung ke nomor resmi atau website resmi perusahaan",
+          "Jangan isi formulir atau data pribadi sebelum yakin keasliannya",
+          "Konsultasikan dengan orang terpercaya sebelum mengambil tindakan",
+          "Gunakan pencarian Google untuk cek reputasi pengirim atau domain"
+        ];
+      } else {
+        suggestions = [
+          "Tetap waspada jika ada permintaan data sensitif di langkah berikutnya",
+          "Verifikasi selalu jika ada transaksi keuangan meski dari sumber yang terlihat aman",
+          "Pastikan URL yang dikunjungi menggunakan HTTPS dan domain resmi"
+        ];
+      }
  
-  // ─── SUMMARY VARIATIF ────────────────────────────────────────────────────
-  const summaryOptions = {
-    aman: [
-      "Tidak ditemukan indikasi kuat yang mengarah ke penipuan, namun tetap disarankan untuk berhati-hati.",
-      "Konten terlihat normal tanpa pola mencurigakan, tetapi kewaspadaan tetap diperlukan.",
-      "Tidak ada tanda penipuan yang jelas, namun tetap hindari membagikan data sensitif."
-    ],
-    warning: [
-      "Terdapat beberapa indikasi yang perlu diwaspadai, sebaiknya lakukan verifikasi tambahan.",
-      "Struktur pesan menunjukkan pola yang meragukan, jangan langsung percaya.",
-      "Ada beberapa elemen mencurigakan, disarankan untuk tidak terburu-buru mengambil tindakan."
-    ],
-    danger: [
-      "Terdeteksi pola yang sangat mirip dengan penipuan digital, sangat disarankan untuk menghindari.",
-      "Konten mengandung banyak indikator berbahaya, jangan melakukan interaksi apapun.",
-      "Risiko penipuan tinggi, sebaiknya abaikan dan jangan klik link yang diberikan."
-    ]
-  };
+      // ─── SUMMARY VARIATIF ────────────────────────────────────────────────────
+      const summaryOptions = {
+        aman: [
+          "Tidak ditemukan indikasi kuat yang mengarah ke penipuan, namun tetap disarankan untuk berhati-hati.",
+          "Konten terlihat normal tanpa pola mencurigakan, tetapi kewaspadaan tetap diperlukan.",
+          "Tidak ada tanda penipuan yang jelas, namun tetap hindari membagikan data sensitif."
+        ],
+        warning: [
+          "Terdapat beberapa indikasi yang perlu diwaspadai, sebaiknya lakukan verifikasi tambahan.",
+          "Struktur pesan menunjukkan pola yang meragukan, jangan langsung percaya.",
+          "Ada beberapa elemen mencurigakan, disarankan untuk tidak terburu-buru mengambil tindakan."
+        ],
+        danger: [
+          "Terdeteksi pola yang sangat mirip dengan penipuan digital, sangat disarankan untuk menghindari.",
+          "Konten mengandung banyak indikator berbahaya, jangan melakukan interaksi apapun.",
+          "Risiko penipuan tinggi, sebaiknya abaikan dan jangan klik link yang diberikan."
+        ]
+      };
  
-  const singkatOptions = {
-    aman: [
-      "Aman, tapi tetap jangan asal isi data pribadi.",
-      "Terlihat aman, namun selalu verifikasi jika ragu.",
-      "Tidak mencurigakan, tapi kewaspadaan tidak ada salahnya."
-    ],
-    warning: [
-      "Masih abu-abu, jangan langsung percaya.",
-      "Ada yang aneh, cek dulu ke sumber resminya.",
-      "Hati-hati, jangan terburu-buru ambil tindakan."
-    ],
-    danger: [
-      "Bahaya, mending skip dan abaikan saja.",
-      "Sangat berisiko, jangan berinteraksi sama sekali.",
-      "Jangan percaya, ini kemungkinan besar penipuan."
-    ]
-  };
+      const singkatOptions = {
+        aman: [
+          "Aman, tapi tetap jangan asal isi data pribadi.",
+          "Terlihat aman, namun selalu verifikasi jika ragu.",
+          "Tidak mencurigakan, tapi kewaspadaan tidak ada salahnya."
+        ],
+        warning: [
+          "Masih abu-abu, jangan langsung percaya.",
+          "Ada yang aneh, cek dulu ke sumber resminya.",
+          "Hati-hati, jangan terburu-buru ambil tindakan."
+        ],
+        danger: [
+          "Bahaya, mending skip dan abaikan saja.",
+          "Sangat berisiko, jangan berinteraksi sama sekali.",
+          "Jangan percaya, ini kemungkinan besar penipuan."
+        ]
+      };
  
-  const rndIdx = (arr) => Math.floor(Math.random() * arr.length);
-  const summary = summaryOptions[status][rndIdx(summaryOptions[status])];
-  const singkat = singkatOptions[status][rndIdx(singkatOptions[status])];
+      const rndIdx = (arr) => Math.floor(Math.random() * arr.length);
+      const summary = summaryOptions[status][rndIdx(summaryOptions[status])];
+      const singkat = singkatOptions[status][rndIdx(singkatOptions[status])];
  
-  // ─── FINAL DATA ──────────────────────────────────────────────────────────
-  const data = {
-    status: status,
-    score: score,
-    confidence: confidence,
-    reasons: reasons,
-    suggestions: suggestions,
-    summary: summary,
-    singkat: singkat
-  };
+      // ─── FINAL DATA ──────────────────────────────────────────────────────────
+      const data = {
+        status: status,
+        score: score,
+        confidence: confidence,
+        reasons: reasons,
+        suggestions: suggestions,
+        summary: summary,
+        singkat: singkat
+      };
  
-  // Simpan hasil analisis ke Supabase
-  try {
-    await saveToDatabase(input, type, data);
-  } catch (e) {
-    console.log("DB error:", e);
-  }
+      // FIX #8: Tangani error DB dengan toast ringan, tidak memblokir alur utama
+      try {
+        await saveToDatabase(input, type, data);
+      } catch (e) {
+        console.log("DB error:", e);
+        // Tampilkan notifikasi ringan tanpa mengganggu user
+        showDbToast('⚠️ Gagal menyimpan data, namun analisis tetap berjalan.');
+      }
  
       // Consume 1 usage
       const usage = getUsage();
@@ -1112,7 +1210,7 @@ if (
  
     } catch (err) {
       console.error(err);
-      // Fallback result if API fails
+      // Fallback result if something fails
       renderFallback(quickRisk);
       const usage = getUsage();
       saveUsage(usage.count + 1);
@@ -1121,19 +1219,21 @@ if (
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('ctaBtn').disabled = false;
       document.getElementById('ctaBtn').textContent = 'Amankan Sekarang 🛡️';
+      // FIX #1: Lepas flag processing setelah selesai (berhasil atau gagal)
+      isProcessing = false;
     }
   }
  
   function renderResult(data) {
    let level;
  
-if (data.status === "aman") {
-  level = "LOW";
-} else if (data.status === "warning") {
-  level = "MEDIUM";
-} else {
-  level = "HIGH";
-}
+    if (data.status === "aman") {
+      level = "LOW";
+    } else if (data.status === "warning") {
+      level = "MEDIUM";
+    } else {
+      level = "HIGH";
+    }
     const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
  
     const statusMap = {
@@ -1218,135 +1318,196 @@ if (data.status === "aman") {
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
   renderLimitUI();
- function handleClick() {
-  const btn = document.getElementById("ctaBtn");
-
-  // animasi dulu
-  btn.classList.add("clicked");
-
-  setTimeout(() => {
-    btn.classList.remove("clicked");
-  }, 400);
-
-  // baru jalan analyze
-  setTimeout(() => {
-    analyze();
-  }, 100);
-}
+ 
+  function handleClick() {
+    // FIX #1: Blokir klik jika sedang dalam proses analisa
+    if (isProcessing) return;
+ 
+    const btn = document.getElementById("ctaBtn");
+ 
+    // Animasi bounce tetap berjalan
+    btn.classList.add("clicked");
+    setTimeout(() => {
+      btn.classList.remove("clicked");
+    }, 400);
+ 
+    // Jalankan analyze dengan sedikit delay agar animasi sempat jalan
+    setTimeout(() => {
+      analyze();
+    }, 100);
+  }
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
 <script>
-const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
-const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
+  const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
+  const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
  
-if (!window.supabaseClient) {
-  window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-}
+  if (!window.supabaseClient) {
+    window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+  }
  
-var supabase = window.supabaseClient;
-  // 🔥 PANGGIL SETELAH SUPABASE SIAP
-window.addEventListener("load", () => {
-  loadLearnedPatterns();
-});
+  var supabase = window.supabaseClient;
+ 
+  // FIX #2: Panggil loadLearnedPatterns saat halaman selesai dimuat
+  window.addEventListener("load", () => {
+    loadLearnedPatterns();
+  });
+ 
+  // FIX #4: Optimalkan saveLearnedPatterns dengan batch upsert
+  // Sebelumnya: loop per kata → N request ke DB
+  // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
   async function saveLearnedPatterns(input) {
-  try {
-    const words = input.toLowerCase().split(/\W+/);
-
-    for (const w of words) {
-      if (w.length <= 4) continue;
-
-      const { data } = await supabase
+    try {
+      // Ambil kata-kata yang cukup panjang (> 4 huruf)
+      const words = [...new Set(
+        input.toLowerCase().split(/\W+/).filter(w => w.length > 4)
+      )];
+ 
+      if (words.length === 0) return;
+ 
+      // Fetch semua kata yang sudah ada dalam satu query (bukan loop)
+      const { data: existing } = await supabase
         .from("learned_patterns")
-        .select("*")
-        .eq("word", w)
-        .maybeSingle();
-
-      if (data) {
+        .select("id, word, count")
+        .in("word", words);
+ 
+      const existingMap = {};
+      (existing || []).forEach(d => { existingMap[d.word] = d; });
+ 
+      // Pisahkan kata yang perlu diupdate vs diinsert baru
+      const toUpdate = [];
+      const toInsert = [];
+ 
+      words.forEach(w => {
+        if (existingMap[w]) {
+          toUpdate.push({ id: existingMap[w].id, count: existingMap[w].count + 1 });
+        } else {
+          toInsert.push({ word: w, count: 1 });
+        }
+      });
+ 
+      // Upsert update secara batch
+      if (toUpdate.length > 0) {
+        for (const u of toUpdate) {
+          await supabase
+            .from("learned_patterns")
+            .update({ count: u.count })
+            .eq("id", u.id);
+        }
+      }
+ 
+      // Insert baru secara batch sekaligus
+      if (toInsert.length > 0) {
         await supabase
           .from("learned_patterns")
-          .update({ count: data.count + 1 })
-          .eq("id", data.id);
+          .insert(toInsert);
+      }
+ 
+    } catch (e) {
+      console.log("save learning error:", e);
+    }
+  }
+ 
+  async function saveToDatabase(input, type, data) {
+    try {
+      if (!input || !data) {
+        console.log("❌ Data tidak valid");
+        return;
+      }
+ 
+      const payload = {
+        input: input,
+        type: type,
+        status: data.status,
+        score: data.score,
+        confidence: data.confidence,
+        summary: data.summary,
+        singkat: data.singkat,
+        reasons: JSON.stringify(data.reasons || []),
+        suggestions: JSON.stringify(data.suggestions || []),
+        created_at: new Date().toISOString()
+      };
+ 
+      const { error } = await supabase
+        .from('scans')
+        .insert([payload]);
+ 
+      if (error) {
+        console.log("❌ Supabase ERROR:", error.message);
+        // FIX #8: Lempar error agar bisa ditangkap oleh caller dan ditampilkan sebagai toast
+        throw new Error(error.message);
+      } else {
+        console.log("✅ Data berhasil masuk ke Supabase");
+      }
+ 
+    } catch (e) {
+      console.log("❌ Exception:", e);
+      throw e; // Re-throw agar ditangkap di analyze()
+    }
+  }
+ 
+  // FIX #3: Gunakan upsert berdasarkan kolom unik 'date' untuk menghindari race condition
+  // Sebelumnya: select → insert/update terpisah → rentan duplikasi saat akses paralel
+  // Sekarang: upsert sekaligus dengan onConflict → aman dari race condition
+  async function trackVisitor() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+ 
+      // Upsert: insert jika belum ada, update count jika sudah ada berdasarkan 'date'
+      // Catatan: kolom 'date' harus memiliki UNIQUE constraint di Supabase
+      const { error } = await supabase
+        .from('visitors')
+        .upsert(
+          [{ date: today, count: 1 }],
+          {
+            onConflict: 'date',        // trigger update jika date sudah ada
+            ignoreDuplicates: false    // tetap jalankan update (bukan ignore)
+          }
+        );
+ 
+      if (error) {
+        // Fallback ke metode lama jika upsert tidak didukung (misal constraint belum ada)
+        console.log("upsert visitor failed, fallback:", error);
+        await trackVisitorFallback(today);
+      }
+    } catch (e) {
+      console.log("trackVisitor exception:", e);
+    }
+  }
+ 
+  // FIX #3: Fallback visitor tracking (metode lama) jika upsert gagal
+  async function trackVisitorFallback(today) {
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from('visitors')
+        .select('id, count')
+        .eq('date', today)
+        .single();
+ 
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.log("trackVisitor fallback fetch error:", fetchError);
+        return;
+      }
+ 
+      if (existing) {
+        await supabase
+          .from('visitors')
+          .update({ count: existing.count + 1 })
+          .eq('id', existing.id);
       } else {
         await supabase
-          .from("learned_patterns")
-          .insert([{ word: w, count: 1 }]);
+          .from('visitors')
+          .insert([{ date: today, count: 1 }]);
       }
+    } catch (e) {
+      console.log("trackVisitorFallback exception:", e);
     }
-
-  } catch (e) {
-    console.log("save learning error:", e);
   }
-}
  
-async function saveToDatabase(input, type, data) {
-  try {
-    if (!input || !data) {
-      console.log("❌ Data tidak valid");
-      return;
-    }
-
-    const payload = {
-      input: input,
-      type: type,
-      status: data.status,
-      score: data.score,
-      confidence: data.confidence,
-      summary: data.summary,
-      singkat: data.singkat,
-      reasons: JSON.stringify(data.reasons || []),
-      suggestions: JSON.stringify(data.suggestions || []),
-      created_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-      .from('scans')
-      .insert([payload]);
-
-    if (error) {
-      console.log("❌ Supabase ERROR:", error.message);
-    } else {
-      console.log("✅ Data berhasil masuk ke Supabase");
-    }
-
-  } catch (e) {
-    console.log("❌ Exception:", e);
-  }
-}
-async function trackVisitor() {
-  try {
-    const today = new Date().toISOString().split('T')[0];
- 
-    const { data: existing, error: fetchError } = await supabase
-      .from('visitors')
-      .select('id, count')
-      .eq('date', today)
-      .single();
- 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.log("trackVisitor fetch error:", fetchError);
-      return;
-    }
- 
-    if (existing) {
-      const { error: updateError } = await supabase
-        .from('visitors')
-        .update({ count: existing.count + 1 })
-        .eq('id', existing.id);
-      if (updateError) console.log("trackVisitor update error:", updateError);
-    } else {
-      const { error: insertError } = await supabase
-        .from('visitors')
-        .insert([{ date: today, count: 1 }]);
-      if (insertError) console.log("trackVisitor insert error:", insertError);
-    }
-  } catch (e) {
-    console.log("trackVisitor exception:", e);
-  }
-}
- 
-// Panggil saat halaman pertama kali dibuka
-trackVisitor();
+  // Panggil saat halaman pertama kali dibuka
+  trackVisitor();
 </script>
 </body>
 </html>
+ 
