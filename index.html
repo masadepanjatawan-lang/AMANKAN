@@ -1144,6 +1144,35 @@ trustManipulationPatterns.forEach(pattern => {
     );
   }
 });
+      // ─── SOCIAL MEDIA SCAM DETECTION ─────────────────────────
+
+const socialScamPatterns = [
+  "join grup telegram",
+  "join telegram",
+  "chat admin",
+  "hubungi admin",
+  "wa admin",
+  "nomor whatsapp",
+  "dm sekarang",
+  "private chat",
+  "inbox sekarang",
+  "lanjut via telegram",
+  "lanjut via wa",
+  "klik grup",
+  "join vip",
+  "grup vip"
+];
+
+socialScamPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 18;
+    dangerCount++;
+
+    reasons.push(
+      `Pola scam sosial media terdeteksi: "${pattern}"`
+    );
+  }
+});
 // ─── ROMANCE SCAM DETECTION ─────────────────────────
 
 const romanceScamPatterns = [
@@ -1547,6 +1576,31 @@ unrealisticPatterns.forEach(pattern => {
 
     reasons.push(
       `Janji tidak realistis terdeteksi: "${pattern}"`
+    );
+  }
+});
+      // ─── FAKE TESTIMONI DETECTION ─────────────────────────
+
+const fakeTestimoniPatterns = [
+  "testimoni real",
+  "bukti wd",
+  "bukti transfer",
+  "sudah terbukti",
+  "member sudah profit",
+  "sudah banyak yang berhasil",
+  "jamin terpercaya",
+  "testimoni customer",
+  "hasil member",
+  "ss penarikan"
+];
+
+fakeTestimoniPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 15;
+    dangerCount++;
+
+    reasons.push(
+      `Pola testimoni manipulatif terdeteksi: "${pattern}"`
     );
   }
 });
