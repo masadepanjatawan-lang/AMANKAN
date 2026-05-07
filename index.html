@@ -678,7 +678,7 @@
       <div class="result-singkat" id="singkat"></div>
     </div>
     <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
-    <p class="disclaimer">📌 Hasil ini dihasilkan oleh AI dan bersifat indikasi, bukan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
+    <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan..</p>
   </div>
  
   <!-- FIX #8: Toast notifikasi ringan untuk error DB -->
@@ -921,10 +921,10 @@
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
     const loadingMessages = [
-      'AI sedang menganalisa...',
-      'Memeriksa pola penipuan...',
-      'Mencocokkan database scam...',
-      'Hampir selesai...'
+  'Menganalisis pola risiko...',
+  'Memeriksa indikator penipuan...',
+  'Mencocokkan pola digital...',
+  'Hampir selesai...'
     ];
     let loadingMsgIndex = 0;
     const loadingTextEl = document.querySelector('#loadingState .loading-text');
@@ -1039,11 +1039,11 @@
       }
       if (text.includes("otp")) {
         score -= 25; dangerCount++;
-        reasons.push("Permintaan kode OTP — tidak pernah diminta oleh layanan resmi");
+        reasons.push("Permintaan OTP melalui chat/pihak lain terdeteksi — sangat berisiko");
       }
       if (text.includes("password")) {
         score -= 25; dangerCount++;
-        reasons.push("Meminta password — layanan sah tidak pernah meminta password Anda");
+        reasons.push("Permintaan password secara langsung terdeteksi — sangat berisiko");
       }
  // ─── SOCIAL ENGINEERING DETECTION ─────────────────────────
 
@@ -1266,7 +1266,7 @@ emotionalPressurePatterns.forEach(pattern => {
       // Domain & link mencurigakan
       if (text.includes(".xyz")) {
         score -= 20; dangerCount++;
-        reasons.push("Domain .xyz terdeteksi — sering digunakan untuk situs penipuan");
+        reasons.push("Domain .xyz memerlukan kewaspadaan tambahan karena sering digunakan pada situs anonim/sementara");
       }
       if (text.includes("bit.ly")) {
         score -= 15; dangerCount++;
@@ -1422,15 +1422,15 @@ if (
       // Domain terpercaya — bonus poin
       if (text.includes("google.com")) {
         score += 10;
-        reasons.push("Mengandung domain Google yang terverifikasi");
+        reasons.push("Mengandung domain yang umum digunakan layanan Google");
       }
       if (text.includes("tokopedia.com")) {
         score += 10;
-        reasons.push("Mengandung domain Tokopedia yang terverifikasi");
+        reasons.push("Mengandung domain yang umum digunakan Tokopedia");
       }
       if (text.includes("shopee.co.id")) {
         score += 10;
-        reasons.push("Mengandung domain Shopee resmi yang terverifikasi");
+        reasons.push("Mengandung domain yang umum digunakan Shopee");
       }
  
       // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
@@ -1778,7 +1778,7 @@ if (status === "danger") {
           "Ada beberapa elemen mencurigakan, disarankan untuk tidak terburu-buru mengambil tindakan."
         ],
         danger: [
-          "Terdeteksi pola yang sangat mirip dengan penipuan digital, sangat disarankan untuk menghindari.",
+         "Terdeteksi banyak pola yang sering muncul pada penipuan digital, sangat disarankan untuk menghindari.",
           "Konten mengandung banyak indikator berbahaya, jangan melakukan interaksi apapun.",
           "Risiko penipuan tinggi, sebaiknya abaikan dan jangan klik link yang diberikan."
         ]
@@ -1796,7 +1796,7 @@ if (status === "danger") {
           "Hati-hati, jangan terburu-buru ambil tindakan."
         ],
         danger: [
-          "Bahaya, mending skip dan abaikan saja.",
+          "Risikonya tinggi, lebih aman untuk tidak berinteraksi."",
           "Sangat berisiko, jangan berinteraksi sama sekali.",
           "Jangan percaya, ini kemungkinan besar penipuan."
         ]
@@ -1843,7 +1843,9 @@ if (status === "danger") {
     } finally {
       // BUG FIX #7: Hentikan rotasi teks loading dan kembalikan ke teks semula
       clearInterval(loadingInterval);
-      if (loadingTextEl) loadingTextEl.textContent = 'AI sedang menganalisa...';
+     if (loadingTextEl) {
+  loadingTextEl.textContent = 'Menganalisis pola risiko...';
+}
  
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('ctaBtn').disabled = false;
@@ -1856,7 +1858,7 @@ if (status === "danger") {
   function renderResult(data) {
    let level;
  
-    if (data.status === "aman") {
+    if (data.status === "low_risk") {
       level = "LOW";
     } else if (data.status === "warning") {
       level = "MEDIUM";
@@ -1866,9 +1868,9 @@ if (status === "danger") {
     const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
  
     const statusMap = {
-      LOW: '🟢 RISIKO RENDAH',',
+      LOW: '🟢 RISIKO RENDAH',
       MEDIUM: '⚠️ PERLU HATI-HATI',
-      HIGH: '🚨 BERBAHAYA — JANGAN DIBUKA'
+     HIGH: '🚨 RISIKO TINGGI — HINDARI INTERAKSI'
     };
  
     document.getElementById('statusStrip').className = `status-strip ${cssClass}`;
@@ -1881,8 +1883,7 @@ if (status === "danger") {
     fill.className = `confidence-fill ${cssClass}`;
     label.className = `confidence-label ${cssClass}`;
     label.textContent =
-`Tingkat keyakinan analisis: ${data.confidence || 80}%`; ${level === 'LOW' ? 'aman' : level === 'MEDIUM' ? 'perlu hati-hati' : 'berbahaya'}`;
-    setTimeout(() => { fill.style.width = (data.confidence || 80) + '%'; }, 100);
+`Tingkat keyakinan analisis: ${data.confidence || 80}%`;
  
     const reasonsList = document.getElementById('reasonsList');
     reasonsList.innerHTML = '';
