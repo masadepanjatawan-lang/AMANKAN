@@ -1159,7 +1159,23 @@ manipulationPatterns.forEach(pattern => {
         score -= 10;
         reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
       }
- 
+ // ─── MULTI RED FLAG SYSTEM ─────────────────────────
+
+if (dangerCount >= 4) {
+  score -= 15;
+
+  reasons.push(
+    "Terlalu banyak indikator scam muncul bersamaan — risiko sangat tinggi"
+  );
+}
+
+if (dangerCount >= 6) {
+  score -= 20;
+
+  reasons.push(
+    "Pola penipuan terdeteksi secara masif dari banyak indikator berbeda"
+  );
+}
       // KOMBINASI KHUSUS JOB SCAM
       if (
         text.includes("deposit") &&
