@@ -1717,7 +1717,7 @@ fakeTestimoniPatterns.forEach(pattern => {
       // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
       let status;
     if (score >= 85) {
-  status = "aman";
+  status = "low_risk";
 } else if (score >= 45) {
   status = "warning";
 } else {
@@ -1866,7 +1866,7 @@ if (status === "danger") {
     const cssClass = level === 'LOW' ? 'safe' : level === 'MEDIUM' ? 'warn' : 'danger';
  
     const statusMap = {
-      LOW: '🟢 AMAN — TIDAK TERDETEKSI PENIPUAN',
+      LOW: '🟢 RISIKO RENDAH',',
       MEDIUM: '⚠️ PERLU HATI-HATI',
       HIGH: '🚨 BERBAHAYA — JANGAN DIBUKA'
     };
@@ -1880,7 +1880,8 @@ if (status === "danger") {
     const label = document.getElementById('confidenceLabel');
     fill.className = `confidence-fill ${cssClass}`;
     label.className = `confidence-label ${cssClass}`;
-    label.textContent = `${data.confidence || 80}% yakin ${level === 'LOW' ? 'aman' : level === 'MEDIUM' ? 'perlu hati-hati' : 'berbahaya'}`;
+    label.textContent =
+`Tingkat keyakinan analisis: ${data.confidence || 80}%`; ${level === 'LOW' ? 'aman' : level === 'MEDIUM' ? 'perlu hati-hati' : 'berbahaya'}`;
     setTimeout(() => { fill.style.width = (data.confidence || 80) + '%'; }, 100);
  
     const reasonsList = document.getElementById('reasonsList');
