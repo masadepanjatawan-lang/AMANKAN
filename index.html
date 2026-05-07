@@ -1045,7 +1045,33 @@
         score -= 25; dangerCount++;
         reasons.push("Meminta password — layanan sah tidak pernah meminta password Anda");
       }
- 
+ // ─── SOCIAL ENGINEERING DETECTION ─────────────────────────
+
+const manipulationPatterns = [
+  "akun akan diblokir",
+  "demi keamanan",
+  "verifikasi identitas",
+  "jangan beri tahu siapa pun",
+  "tim resmi",
+  "kami dari pihak",
+  "terdeteksi aktivitas mencurigakan",
+  "akun anda bermasalah",
+  "konfirmasi data",
+  "pemulihan akun",
+  "akses akan dihentikan",
+  "identitas anda"
+];
+
+manipulationPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 18;
+    dangerCount++;
+
+    reasons.push(
+      `Terdeteksi pola manipulasi psikologis: "${pattern}"`
+    );
+  }
+});
       // Kata urgensi — bobot sedang
       if (text.includes("klik sekarang")) {
         score -= 15; dangerCount++;
