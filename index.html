@@ -1209,7 +1209,7 @@ if (dangerCount >= 6) {
       // FIX #7: Normalisasi skor dengan batas minimum lebih realistis (5, bukan 20)
       // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
       score = Math.max(5, Math.min(95, score));
- 
+ console.log("TOTAL dangerCount:", dangerCount);
       // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
       let status;
       if (score >= 80) {
