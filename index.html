@@ -1576,6 +1576,18 @@ if (
     "Kombinasi link + verifikasi akun terdeteksi — pola phishing umum"
   );
 }
+      // ─── UNKNOWN LINK DETECTION ─────────────────────────
+
+if (
+  text.includes("http") &&
+  dangerCount === 0
+) {
+  score -= 10;
+
+  reasons.push(
+    "Link terdeteksi namun belum dapat diverifikasi sepenuhnya"
+  );
+}
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
       const totalChars = input.length;
       const upperChars = (input.match(/[A-Z]/g) || []).length;
