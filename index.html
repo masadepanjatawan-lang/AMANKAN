@@ -1610,13 +1610,13 @@ fakeTestimoniPatterns.forEach(pattern => {
  console.log("TOTAL dangerCount:", dangerCount);
       // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
       let status;
-      if (score >= 80) {
-        status = "aman";
-      } else if (score >= 50) {
-        status = "warning";
-      } else {
-        status = "danger";
-      }
+    if (score >= 88) {
+  status = "aman";
+} else if (score >= 60) {
+  status = "warning";
+} else {
+  status = "danger";
+}
  
       // FIX #6: Hilangkan nilai acak pada confidence agar hasil konsisten
       // Sebelumnya: confidence = score + random(-5..+5)
