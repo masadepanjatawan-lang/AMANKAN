@@ -1556,6 +1556,26 @@ suspiciousActionPatterns.forEach(pattern => {
     );
   }
 });
+      // ─── ACTION + ACCOUNT PHISHING COMBINATION ─────────────────────────
+
+if (
+  (
+    text.includes("klik link") ||
+    text.includes("buka link")
+  ) &&
+  (
+    text.includes("akun") ||
+    text.includes("verifikasi") ||
+    text.includes("login")
+  )
+) {
+  score -= 20;
+  dangerCount++;
+
+  reasons.push(
+    "Kombinasi link + verifikasi akun terdeteksi — pola phishing umum"
+  );
+}
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
       const totalChars = input.length;
       const upperChars = (input.match(/[A-Z]/g) || []).length;
