@@ -1072,6 +1072,56 @@ manipulationPatterns.forEach(pattern => {
     );
   }
 });
+      // ─── HUMAN MANUAL SCAM DETECTION ─────────────────────────
+
+const trustManipulationPatterns = [
+  "percaya sama saya",
+  "tenang aja",
+  "saya amanah",
+  "saya serius",
+  "demi allah",
+  "saya tidak menipu",
+  "jangan khawatir",
+  "saya asli",
+  "saya jujur",
+  "kak percaya aja",
+  "saya bukan scam",
+  "aman kok",
+  "sumpah"
+];
+
+trustManipulationPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 15;
+    dangerCount++;
+
+    reasons.push(
+      `Terdeteksi manipulasi kepercayaan: "${pattern}"`
+    );
+  }
+});
+
+// tekanan emosional
+const emotionalPressurePatterns = [
+  "tolong bantu",
+  "saya lagi susah",
+  "butuh cepat",
+  "urgent banget",
+  "cuma anda yang bisa bantu",
+  "jangan bilang siapa siapa",
+  "rahasia ya"
+];
+
+emotionalPressurePatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 18;
+    dangerCount++;
+
+    reasons.push(
+      `Tekanan emosional terdeteksi: "${pattern}"`
+    );
+  }
+});
       // Kata urgensi — bobot sedang
       if (text.includes("klik sekarang")) {
         score -= 15; dangerCount++;
