@@ -1072,6 +1072,50 @@ manipulationPatterns.forEach(pattern => {
     );
   }
 });
+      // ─── FAKE CUSTOMER SERVICE DETECTION ─────────────────────────
+
+const fakeCsPatterns = [
+  "customer service",
+  "call center",
+  "bantuan resmi",
+  "admin resmi",
+  "tim support",
+  "layanan pelanggan",
+  "dibantu proses",
+  "silakan kirim otp",
+  "verifikasi akun anda",
+  "nomor resmi kami"
+];
+
+fakeCsPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 15;
+    dangerCount++;
+
+    reasons.push(
+      `Pola customer service palsu terdeteksi: "${pattern}"`
+    );
+  }
+});
+
+// kombinasi CS + OTP
+if (
+  (
+    text.includes("otp") ||
+    text.includes("kode verifikasi")
+  ) &&
+  (
+    text.includes("customer service") ||
+    text.includes("admin")
+  )
+) {
+  score -= 40;
+  dangerCount++;
+
+  reasons.push(
+    "Customer service meminta OTP — sangat berbahaya"
+  );
+}
       // ─── HUMAN MANUAL SCAM DETECTION ─────────────────────────
 
 const trustManipulationPatterns = [
@@ -1100,7 +1144,30 @@ trustManipulationPatterns.forEach(pattern => {
     );
   }
 });
+// ─── ROMANCE SCAM DETECTION ─────────────────────────
 
+const romanceScamPatterns = [
+  "sayang percaya aku",
+  "aku cinta kamu",
+  "tolong bantu aku",
+  "aku lagi kesulitan",
+  "aku di luar negeri",
+  "kirim uang",
+  "aku janji balikin",
+  "hanya kamu yang aku punya",
+  "tolong jangan tinggalkan aku"
+];
+
+romanceScamPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 20;
+    dangerCount++;
+
+    reasons.push(
+      `Pola manipulasi emosional terdeteksi: "${pattern}"`
+    );
+  }
+});
 // tekanan emosional
 const emotionalPressurePatterns = [
   "tolong bantu",
@@ -1361,7 +1428,54 @@ investasiScamPatterns.forEach(pattern => {
     );
   }
 });
+// ─── PINJOL / LOAN SCAM DETECTION ─────────────────────────
 
+const pinjolScamPatterns = [
+  "pinjaman cepat",
+  "langsung cair",
+  "tanpa jaminan",
+  "tanpa bi checking",
+  "dana cair",
+  "proses 5 menit",
+  "limit tinggi",
+  "pinjaman online",
+  "cukup ktp",
+  "acc cepat",
+  "approve cepat",
+  "legalitas resmi",
+  "bunga rendah",
+  "tenor panjang"
+];
+
+pinjolScamPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 18;
+    dangerCount++;
+
+    reasons.push(
+      `Pola pinjaman mencurigakan terdeteksi: "${pattern}"`
+    );
+  }
+});
+
+// kombinasi pinjaman + data pribadi
+if (
+  (
+    text.includes("ktp") ||
+    text.includes("selfie")
+  ) &&
+  (
+    text.includes("pinjaman") ||
+    text.includes("dana cair")
+  )
+) {
+  score -= 30;
+  dangerCount++;
+
+  reasons.push(
+    "Permintaan data identitas dalam konteks pinjaman — berisiko tinggi"
+  );
+}
 // kombinasi investasi + tanpa risiko
 if (
   (
@@ -1411,7 +1525,31 @@ if (
         score -= 10;
         reasons.push("Pesan sangat pendek namun langsung berisi ajakan — pola pesan phishing");
       }
- 
+ // ─── TOO GOOD TO BE TRUE DETECTION ─────────────────────────
+
+const unrealisticPatterns = [
+  "100% berhasil",
+  "100% profit",
+  "dijamin berhasil",
+  "tanpa risiko",
+  "langsung kaya",
+  "cuan besar",
+  "hasil pasti",
+  "jamin untung",
+  "pasti cair",
+  "tidak mungkin rugi"
+];
+
+unrealisticPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 20;
+    dangerCount++;
+
+    reasons.push(
+      `Janji tidak realistis terdeteksi: "${pattern}"`
+    );
+  }
+});
       // FIX #7: Normalisasi skor dengan batas minimum lebih realistis (5, bukan 20)
       // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
       score = Math.max(5, Math.min(95, score));
