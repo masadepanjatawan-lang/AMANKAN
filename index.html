@@ -1429,7 +1429,13 @@ if (
       // FIX #6: Hilangkan nilai acak pada confidence agar hasil konsisten
       // Sebelumnya: confidence = score + random(-5..+5)
       // Sekarang: confidence langsung menggunakan score agar reproducible
-      let confidence = score;
+      let confidence;
+
+if (status === "danger") {
+  confidence = 100 - score;
+} else {
+  confidence = score;
+}
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
       if (reasons.length === 0) {
