@@ -1588,6 +1588,19 @@ if (
     "Link terdeteksi namun belum dapat diverifikasi sepenuhnya"
   );
 }
+      // ─── SUSPICIOUS LONG DOMAIN DETECTION ─────────────────────────
+
+const suspiciousDomainPattern =
+  /[a-z0-9-]{25,}\.(com|net|xyz|id|site|online)/;
+
+if (suspiciousDomainPattern.test(text)) {
+  score -= 20;
+  dangerCount++;
+
+  reasons.push(
+    "Domain terlalu panjang dan tidak biasa — pola umum phishing modern"
+  );
+}
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
       const totalChars = input.length;
       const upperChars = (input.match(/[A-Z]/g) || []).length;
