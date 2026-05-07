@@ -1628,6 +1628,18 @@ if (suspiciousDomainPattern.test(text)) {
     "Domain terlalu panjang dan tidak biasa — pola umum phishing modern"
   );
 }
+      // ─── SHORT MESSAGE + LINK DETECTION ─────────────────────────
+
+if (
+  text.length < 80 &&
+  text.includes("http")
+) {
+  score -= 12;
+
+  reasons.push(
+    "Pesan singkat berisi link — pola umum phishing cepat"
+  );
+}
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
       const totalChars = input.length;
       const upperChars = (input.match(/[A-Z]/g) || []).length;
