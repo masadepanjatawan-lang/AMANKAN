@@ -1269,7 +1269,7 @@ emotionalPressurePatterns.forEach(pattern => {
         reasons.push("Domain .xyz terdeteksi — sering digunakan untuk situs penipuan");
       }
       if (text.includes("bit.ly")) {
-        score -= 20; dangerCount++;
+        score -= 15; dangerCount++;
         reasons.push("Link dipersingkat dengan bit.ly — menyembunyikan tujuan asli URL");
       }
       if (text.includes("tinyurl")) {
