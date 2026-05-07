@@ -1332,6 +1332,56 @@ if (dangerCount >= 6) {
     "Pola penipuan terdeteksi secara masif dari banyak indikator berbeda"
   );
 }
+      // ─── INVESTASI SCAM DETECTION ─────────────────────────
+
+const investasiScamPatterns = [
+  "profit harian",
+  "cuan konsisten",
+  "robot trading",
+  "copy trade",
+  "passive income",
+  "garansi profit",
+  "profit tetap",
+  "anti rugi",
+  "hasil stabil",
+  "withdraw cepat",
+  "ai trading",
+  "investasi crypto",
+  "cuan otomatis",
+  "trading otomatis"
+];
+
+investasiScamPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 20;
+    dangerCount++;
+
+    reasons.push(
+      `Pola investasi mencurigakan terdeteksi: "${pattern}"`
+    );
+  }
+});
+
+// kombinasi investasi + tanpa risiko
+if (
+  (
+    text.includes("investasi") ||
+    text.includes("trading") ||
+    text.includes("crypto")
+  ) &&
+  (
+    text.includes("tanpa risiko") ||
+    text.includes("anti rugi") ||
+    text.includes("jamin profit")
+  )
+) {
+  score -= 35;
+  dangerCount++;
+
+  reasons.push(
+    "Investasi dengan klaim tanpa risiko terdeteksi — red flag finansial"
+  );
+}
       // KOMBINASI KHUSUS JOB SCAM
       if (
         text.includes("deposit") &&
