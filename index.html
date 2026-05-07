@@ -1103,6 +1103,55 @@ manipulationPatterns.forEach(pattern => {
         score -= 20; dangerCount++;
         reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
       }
+      // ─── FAKE BRAND DOMAIN DETECTION ─────────────────────────
+
+const fakeBrandDomains = [
+  "shopee-",
+  "tokopedia-",
+  "dana-",
+  "bca-",
+  "ovo-",
+  "gopay-",
+  "whatsapp-",
+  "telegram-",
+  "paypal-"
+];
+
+fakeBrandDomains.forEach(domain => {
+  if (text.includes(domain)) {
+    score -= 30;
+    dangerCount++;
+
+    reasons.push(
+      `Domain mencurigakan meniru brand terkenal: "${domain}"`
+    );
+  }
+});
+
+// keyword phishing tambahan
+const phishingWords = [
+  "login",
+  "verify",
+  "verification",
+  "security",
+  "account",
+  "support",
+  "center"
+];
+
+phishingWords.forEach(word => {
+  if (
+    text.includes(word) &&
+    fakeBrandDomains.some(d => text.includes(d))
+  ) {
+    score -= 15;
+    dangerCount++;
+
+    reasons.push(
+      `Terdeteksi pola phishing brand + "${word}"`
+    );
+  }
+});
        // ─── APK / FILE SCAM DETECTION ─────────────────────────
 
       if (text.includes(".apk")) {
