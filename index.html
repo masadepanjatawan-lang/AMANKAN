@@ -1533,7 +1533,29 @@ if (
         score -= 30;
         reasons.push("Kombinasi deposit + iming-iming kerja/gaji — sangat khas penipuan");
       }
- 
+ // ─── SUSPICIOUS ACTION DETECTION ─────────────────────────
+
+const suspiciousActionPatterns = [
+  "klik link",
+  "cek akun",
+  "verifikasi akun",
+  "buka link",
+  "login sekarang",
+  "cek sekarang",
+  "akses sekarang",
+  "konfirmasi akun"
+];
+
+suspiciousActionPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 12;
+    dangerCount++;
+
+    reasons.push(
+      `Ajakan tindakan sensitif terdeteksi: "${pattern}"`
+    );
+  }
+});
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
       const totalChars = input.length;
       const upperChars = (input.match(/[A-Z]/g) || []).length;
