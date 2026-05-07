@@ -1144,6 +1144,33 @@ trustManipulationPatterns.forEach(pattern => {
     );
   }
 });
+      // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
+
+const trustWords = [
+  "aman",
+  "terpercaya",
+  "resmi",
+  "amanah",
+  "100%",
+  "jamin"
+];
+
+let trustCount = 0;
+
+trustWords.forEach(word => {
+  if (text.includes(word)) {
+    trustCount++;
+  }
+});
+
+if (trustCount >= 3) {
+  score -= 18;
+  dangerCount++;
+
+  reasons.push(
+    "Terlalu banyak klaim kepercayaan dalam satu pesan"
+  );
+}
       // ─── SOCIAL MEDIA SCAM DETECTION ─────────────────────────
 
 const socialScamPatterns = [
