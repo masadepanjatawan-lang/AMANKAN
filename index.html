@@ -1189,6 +1189,63 @@ phishingWords.forEach(word => {
         dangerCount++;
         reasons.push("Modus paket bermasalah sering digunakan dalam scam digital");
       }
+      // ─── DISGUISED FILE SCAM DETECTION ─────────────────────────
+
+const disguisedFilePatterns = [
+  ".zip",
+  ".rar",
+  ".7z",
+  "download file",
+  "download dokumen",
+  "download invoice",
+  "lihat invoice",
+  "lihat dokumen",
+  "file penting",
+  "google drive",
+  "mediafire",
+  "terabox",
+  "dokumen rahasia"
+];
+
+disguisedFilePatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    score -= 18;
+    dangerCount++;
+
+    reasons.push(
+      `File atau link tersamarkan terdeteksi: "${pattern}"`
+    );
+  }
+});
+
+// kombinasi paket + download
+if (
+  (text.includes("paket") || text.includes("resi")) &&
+  text.includes("download")
+) {
+  score -= 30;
+  dangerCount++;
+
+  reasons.push(
+    "Kombinasi paket/resi + download sangat mirip modus malware scam"
+  );
+}
+
+// kombinasi invoice + drive
+if (
+  text.includes("invoice") &&
+  (
+    text.includes("drive") ||
+    text.includes("mediafire")
+  )
+) {
+  score -= 25;
+  dangerCount++;
+
+  reasons.push(
+    "Invoice dari link file sharing terdeteksi — pola scam modern"
+  );
+}
       // Domain terpercaya — bonus poin
       if (text.includes("google.com")) {
         score += 10;
