@@ -2179,16 +2179,16 @@ label.textContent =
       const { error } = await supabase
         .from('scans')
         .insert([payload]);
- 
+ try {
       if (error) {
         console.log("❌ Supabase ERROR:", error.message);
         // FIX #8: Lempar error agar bisa ditangkap oleh caller dan ditampilkan sebagai toast
         throw new Error(error.message);
       } else {
         console.log("✅ Data berhasil masuk ke Supabase");
-      }
- 
-    } catch (e) {
+      
+ }
+     catch (e) {
       console.log("❌ Exception:", e);
       throw e; // Re-throw agar ditangkap di analyze()
     }
