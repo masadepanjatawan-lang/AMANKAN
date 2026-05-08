@@ -1970,10 +1970,7 @@ if (status === "danger") {
  
     const fill = document.getElementById('confidenceFill');
     const label = document.getElementById('confidenceLabel');
-    fill.className = `confidence-fill ${cssClass}`;
-    label.className = `confidence-label ${cssClass}`;
-    label.textContent =
-`Tingkat keyakinan analisis: ${data.confidence || 80}%`;
+  
  fill.className = `confidence-fill ${cssClass}`;
 fill.style.width = `${data.confidence || 80}%`;
 
