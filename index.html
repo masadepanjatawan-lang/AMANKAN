@@ -961,7 +961,16 @@
       let suggestions = [];
       let dangerCount = 0;
       const detectedPatterns = new Set();
- 
+ function addDanger(pattern, penalty, reason) {
+  if (!detectedPatterns.has(pattern)) {
+    detectedPatterns.add(pattern);
+
+    score -= penalty;
+    dangerCount++;
+
+    reasons.push(reason);
+  }
+}
       const text = input.toLowerCase();
  
       // FIX #2: learnedKeywords sudah pasti siap di sini karena sudah ditunggu
@@ -979,10 +988,13 @@
       // ─── JOB SCAM DETECTION ─────────────────────────
  
       // deposit (PALING PENTING)
-      if (text.includes("deposit")) {
-        score -= 40; dangerCount++;
-        reasons.push("Meminta deposit awal — ciri khas penipuan kerja online");
-      }
+    if (text.includes("deposit")) {
+  addDanger(
+    "deposit",
+    40,
+    "Meminta deposit awal — ciri khas penipuan kerja online"
+  );
+}
  
       // gaji mencurigakan
       if (text.includes("gaji") && (text.includes("kerja") || text.includes("online"))) {
@@ -1030,10 +1042,13 @@
         reasons.push("Janji hasil instan — indikasi tidak realistis");
       }
  
-      if (text.includes("transfer")) {
-        score -= 25; dangerCount++;
-        reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
-      }
+     if (text.includes("transfer")) {
+  addDanger(
+    "transfer",
+    25,
+    "Mengandung instruksi transfer uang — pola umum penipuan finansial"
+  );
+}
    if (
   text.includes("gratis") &&
   (
@@ -1105,15 +1120,13 @@ const manipulationPatterns = [
 
 manipulationPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 18;
-    dangerCount++;
-
-    reasons.push(
-      `Terdeteksi pola manipulasi psikologis: "${pattern}"`
-    );
-  }
-});
-      // ─── FAKE CUSTOMER SERVICE DETECTION ─────────────────────────
+    addDanger(
+  pattern,
+  18,
+  `Terdeteksi pola manipulasi psikologis: "${pattern}"`
+);
+ }
+});      // ─── FAKE CUSTOMER SERVICE DETECTION ─────────────────────────
 
 const fakeCsPatterns = [
   "customer service",
@@ -1130,11 +1143,10 @@ const fakeCsPatterns = [
 
 fakeCsPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 15;
-    dangerCount++;
-
-    reasons.push(
-      `Pola customer service palsu terdeteksi: "${pattern}"`
+   addDanger(
+  pattern,
+  15,
+  `Pola customer service palsu terdeteksi: "${pattern}"`
     );
   }
 });
@@ -1174,14 +1186,16 @@ const trustManipulationPatterns = [
   "sumpah"
 ];
 
-trustManipulationPatterns.forEach(pattern => {
-  if (text.includes(pattern)) {
-    score -= 15;
-    dangerCount++;
 
-    reasons.push(
+   trustManipulationPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+
+    addDanger(
+      pattern,
+      15,
       `Terdeteksi manipulasi kepercayaan: "${pattern}"`
     );
+
   }
 });
       // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
