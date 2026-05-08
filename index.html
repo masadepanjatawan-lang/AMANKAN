@@ -678,7 +678,7 @@
       <div class="result-singkat" id="singkat"></div>
     </div>
     <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
-    <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan..</p>
+    <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
   </div>
  
   <!-- FIX #8: Toast notifikasi ringan untuk error DB -->
@@ -875,6 +875,10 @@
  
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
+     if (!supabase) {
+    showInlineMessage("⚠️ Database belum siap, coba beberapa detik lagi.");
+    return;
+  }
     // FIX #1: Cegah eksekusi ganda jika masih dalam proses
     if (isProcessing) return;
  
@@ -935,7 +939,7 @@
  
     // FIX #10: Sembunyikan hasil lama sebelum proses baru dimulai
     document.getElementById('resultCard').style.display = 'none';
- 
+ document.getElementById('resultCard').scrollTop = 0;
     // FIX #2: Tunggu jika learnedKeywords belum siap dimuat (maks 2 detik)
     if (!patternsLoaded) {
       await new Promise(resolve => {
@@ -956,6 +960,7 @@
       let reasons = [];
       let suggestions = [];
       let dangerCount = 0;
+      const detectedPatterns = new Set();
  
       const text = input.toLowerCase();
  
@@ -988,7 +993,7 @@
       // kerja online
       if (text.includes("kerja online")) {
         score -= 20; dangerCount++;
-        reasons.push("Penawaran kerja online tanpa detail jelas — pola umum scam");
+        reasons.push("Penawaran kerja online tanpa detail yang jelas memerlukan verifikasi tambahan");
       }
  
       // aktivasi akun berbayar
@@ -1012,7 +1017,7 @@
       // tanpa pengalaman
       if (text.includes("tanpa pengalaman")) {
         score -= 15; dangerCount++;
-        reasons.push("Menawarkan kerja tanpa pengalaman — sering dipakai dalam scam");
+        reasons.push("Frasa 'tanpa pengalaman' sering digunakan pada promosi kerja yang perlu diverifikasi");
       }
  
       // langsung cair
@@ -1029,22 +1034,56 @@
         score -= 25; dangerCount++;
         reasons.push("Mengandung instruksi transfer uang — pola umum penipuan finansial");
       }
-      if (text.includes("hadiah")) {
-        score -= 25; dangerCount++;
-        reasons.push("Iming-iming hadiah terdeteksi — teknik social engineering klasik");
-      }
-      if (text.includes("gratis")) {
-        score -= 25; dangerCount++;
-        reasons.push("Penawaran gratis yang tidak jelas sumbernya — sering digunakan penipu");
-      }
-      if (text.includes("otp")) {
-        score -= 25; dangerCount++;
-        reasons.push("Permintaan OTP melalui chat/pihak lain terdeteksi — sangat berisiko");
-      }
-      if (text.includes("password")) {
-        score -= 25; dangerCount++;
-        reasons.push("Permintaan password secara langsung terdeteksi — sangat berisiko");
-      }
+   if (
+  text.includes("gratis") &&
+  (
+    text.includes("hadiah") ||
+    text.includes("claim") ||
+    text.includes("klik sekarang") ||
+    text.includes("dana gratis")
+  )
+) {
+ 
+  score -= 25;
+  dangerCount++;
+
+  reasons.push(
+    "Penawaran gratis dengan pola manipulatif terdeteksi"
+  );
+}
+
+if (
+  text.includes("otp") &&
+  (
+    text.includes("kirim") ||
+    text.includes("berikan") ||
+    text.includes("masukkan") ||
+    text.includes("kode")
+  )
+) {
+  score -= 25;
+  dangerCount++;
+
+  reasons.push(
+    "Permintaan OTP terdeteksi — sangat berisiko jika diminta pihak lain"
+  );
+}
+
+if (
+  text.includes("password") &&
+  (
+    text.includes("kirim") ||
+    text.includes("berikan") ||
+    text.includes("masukkan")
+  )
+) {
+  score -= 25;
+  dangerCount++;
+
+  reasons.push(
+    "Permintaan password secara langsung terdeteksi — tindakan berisiko tinggi"
+  );
+}
  // ─── SOCIAL ENGINEERING DETECTION ─────────────────────────
 
 const manipulationPatterns = [
@@ -1052,8 +1091,10 @@ const manipulationPatterns = [
   "demi keamanan",
   "verifikasi identitas",
   "jangan beri tahu siapa pun",
-  "tim resmi",
-  "kami dari pihak",
+  "tim resmi meminta otp",
+  "kami dari pihak bank",
+"kami dari pihak dana",
+"kami dari pihak shopee",
   "terdeteksi aktivitas mencurigakan",
   "akun anda bermasalah",
   "konfirmasi data",
@@ -1130,7 +1171,6 @@ const trustManipulationPatterns = [
   "saya jujur",
   "kak percaya aja",
   "saya bukan scam",
-  "aman kok",
   "sumpah"
 ];
 
@@ -1146,22 +1186,28 @@ trustManipulationPatterns.forEach(pattern => {
 });
       // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
 
-const trustWords = [
-  "aman",
-  "terpercaya",
-  "resmi",
-  "amanah",
-  "100%",
-  "jamin"
+const excessiveTrustPatterns = [
+  "100% aman",
+  "jamin untung",
+  "dijamin profit",
+  "anti rugi",
+  "tidak mungkin rugi",
+  "profit pasti",
+  "cuan pasti",
+  "garansi profit",
+  "hasil pasti",
+  "untung pasti"
 ];
 
 let trustCount = 0;
 
-trustWords.forEach(word => {
-  if (text.includes(word)) {
+excessiveTrustPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
     trustCount++;
   }
 });
+
+
 
 if (trustCount >= 3) {
   score -= 18;
@@ -1169,6 +1215,14 @@ if (trustCount >= 3) {
 
   reasons.push(
     "Terlalu banyak klaim kepercayaan dalam satu pesan"
+  );
+}
+else if (trustCount >= 2) {
+  score -= 18;
+  dangerCount++;
+
+  reasons.push(
+    "Terdeteksi kombinasi klaim tidak realistis"
   );
 }
       // ─── SOCIAL MEDIA SCAM DETECTION ─────────────────────────
@@ -1258,15 +1312,26 @@ emotionalPressurePatterns.forEach(pattern => {
         score -= 15; dangerCount++;
         reasons.push("Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir");
       }
-      if (text.includes("cepat")) {
-        score -= 15; dangerCount++;
-        reasons.push("Dorongan untuk bertindak cepat — pola manipulasi yang umum dipakai penipu");
-      }
+     if (
+  text.includes("transfer") &&
+  (
+    text.includes("sekarang") ||
+    text.includes("dana") ||
+    text.includes("rekening")
+  )
+) {
+  score -= 15;
+  dangerCount++;
+
+  reasons.push(
+    "Dorongan tindakan cepat terdeteksi — pola manipulasi umum"
+  );
+}
  
       // Domain & link mencurigakan
       if (text.includes(".xyz")) {
         score -= 20; dangerCount++;
-        reasons.push("Domain .xyz memerlukan kewaspadaan tambahan karena sering digunakan pada situs anonim/sementara");
+        reasons.push("Domain .xyz memerlukan verifikasi tambahan karena cukup sering digunakan pada situs sementara atau anonim");
       }
       if (text.includes("bit.ly")) {
         score -= 15; dangerCount++;
@@ -1303,13 +1368,15 @@ fakeBrandDomains.forEach(domain => {
 
 // keyword phishing tambahan
 const phishingWords = [
-  "login",
+  "login akun",
+"login sekarang",
+  "login untuk verifikasi",
   "verify",
   "verification",
   "security",
   "account",
-  "support",
-  "center"
+  "support account",
+  "security center"
 ];
 
 phishingWords.forEach(word => {
@@ -1420,18 +1487,33 @@ if (
   );
 }
       // Domain terpercaya — bonus poin
-      if (text.includes("google.com")) {
-        score += 10;
-        reasons.push("Mengandung domain yang umum digunakan layanan Google");
-      }
-      if (text.includes("tokopedia.com")) {
-        score += 10;
-        reasons.push("Mengandung domain yang umum digunakan Tokopedia");
-      }
-      if (text.includes("shopee.co.id")) {
-        score += 10;
-        reasons.push("Mengandung domain yang umum digunakan Shopee");
-      }
+ if (
+  /^https:\/\/(www\.)?google\.com(\/|$)/.test(text)
+) {
+  score += 10;
+
+  reasons.push(
+    "Mengandung domain yang umum digunakan layanan Google"
+  );
+}
+     if (
+  /^https:\/\/(www\.)?tokopedia\.com(\/|$)/.test(text)
+) {
+  score += 10;
+
+  reasons.push(
+    "Mengandung domain yang umum digunakan Tokopedia"
+  );
+}
+      if (
+  /^https:\/\/(www\.)?shopee\.co\.id(\/|$)/.test(text)
+) {
+  score += 10;
+
+  reasons.push(
+    "Mengandung domain yang umum digunakan Shopee"
+  );
+}
  
       // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
       if (dangerCount >= 2) {
@@ -1476,8 +1558,12 @@ const investasiScamPatterns = [
 
 investasiScamPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 20;
-    dangerCount++;
+    score -= 25;
+
+if (!detectedPatterns.has(pattern)) {
+  detectedPatterns.add(pattern);
+  dangerCount++;
+}
 
     reasons.push(
       `Pola investasi mencurigakan terdeteksi: "${pattern}"`
@@ -1568,7 +1654,7 @@ const suspiciousActionPatterns = [
   "verifikasi akun",
   "buka link",
   "login sekarang",
-  "cek sekarang",
+  "cek sekarang untuk verifikasi",
   "akses sekarang",
   "konfirmasi akun"
 ];
@@ -1604,10 +1690,13 @@ if (
   );
 }
       // ─── UNKNOWN LINK DETECTION ─────────────────────────
-
-if (
+ if (
   text.includes("http") &&
-  dangerCount === 0
+  (
+    text.includes(".xyz") ||
+    text.includes("bit.ly") ||
+    text.includes("tinyurl")
+  )
 ) {
   score -= 10;
 
@@ -1632,12 +1721,13 @@ if (suspiciousDomainPattern.test(text)) {
 
 if (
   text.length < 80 &&
-  text.includes("http")
+  text.includes("http") &&
+  dangerCount >= 1
 ) {
   score -= 12;
 
   reasons.push(
-    "Pesan singkat berisi link — pola umum phishing cepat"
+    "Pesan singkat berisi link dengan indikator tambahan — pola phishing cepat"
   );
 }
       // ─── ANALISIS POLA TEKS ──────────────────────────────────────────────────
@@ -1743,7 +1833,7 @@ if (status === "danger") {
  
       // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
       if (status === "danger") {
-        await saveLearnedPatterns(input);
+        await saveLearnedPatterns(input,dangerCount);
         suggestions = [
           "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
           "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
@@ -1796,7 +1886,7 @@ if (status === "danger") {
           "Hati-hati, jangan terburu-buru ambil tindakan."
         ],
         danger: [
-          "Risikonya tinggi, lebih aman untuk tidak berinteraksi."",
+          "Risikonya tinggi, lebih aman untuk tidak berinteraksi.",
           "Sangat berisiko, jangan berinteraksi sama sekali.",
           "Jangan percaya, ini kemungkinan besar penipuan."
         ]
@@ -1884,7 +1974,12 @@ if (status === "danger") {
     label.className = `confidence-label ${cssClass}`;
     label.textContent =
 `Tingkat keyakinan analisis: ${data.confidence || 80}%`;
- 
+ fill.className = `confidence-fill ${cssClass}`;
+fill.style.width = `${data.confidence || 80}%`;
+
+label.className = `confidence-label ${cssClass}`;
+label.textContent =
+`Tingkat keyakinan analisis: ${data.confidence || 80}%`;
     const reasonsList = document.getElementById('reasonsList');
     reasonsList.innerHTML = '';
     (data.reasons || []).forEach(r => {
@@ -1935,7 +2030,7 @@ if (status === "danger") {
         summary: 'Tidak ditemukan indikasi penipuan yang jelas dari input ini.',
         confidence: 82,
         reasons: ['Tidak ada kata kunci penipuan', 'Struktur terlihat normal', 'Tidak ada urgensi mencurigakan'],
-        suggestions: ['Aman untuk dibaca', 'Tetap verifikasi jika ada keraguan', 'Waspada selalu ya'],
+        suggestions: ["Terlihat berisiko rendah", 'Tetap verifikasi jika ada keraguan', 'Waspada selalu ya'],
         singkat: 'terlihat aman, tapi tetap jaga kewaspadaan.'
       }
     };
@@ -1980,7 +2075,7 @@ if (status === "danger") {
     window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
   }
  
-  var supabase = window.supabaseClient;
+  const supabase = window.supabaseClient;
  
   // FIX #2: Panggil loadLearnedPatterns saat halaman selesai dimuat
   window.addEventListener("load", () => {
@@ -1990,7 +2085,7 @@ if (status === "danger") {
   // FIX #4: Optimalkan saveLearnedPatterns dengan batch upsert
   // Sebelumnya: loop per kata → N request ke DB
   // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
-  async function saveLearnedPatterns(input) {
+ async function saveLearnedPatterns(input, dangerCount) {
     try {
       // BUG FIX #4: Daftar kata umum yang tidak relevan (stopwords bahasa Indonesia & Inggris)
       // Kata-kata ini terlalu generik dan akan merusak akurasi analisa jika disimpan
@@ -2000,12 +2095,14 @@ if (status === "danger") {
         'masih', 'setelah', 'kalau', 'karena', 'sekarang', 'jangan', 'anda',
         'saya', 'kami', 'mereka', 'kamu', 'namun', 'tetapi', 'juga', 'atau',
         'dari', 'this', 'that', 'with', 'your', 'have', 'been', 'will', 'from',
-        'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than'
+        'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than','banget',
+        'cepat', 'gratisan', 'resmi', 'admin', 'akun', 'website', 'promo', 'transfer'
       ]);
  
       // Ambil kata-kata yang cukup panjang (> 4 huruf) DAN bukan stopwords
+      if (dangerCount < 3) return;
       const words = [...new Set(
-        input.toLowerCase().split(/\W+/).filter(w =>
+        input.toLowerCase().split(/\W+/).filter(w => 
           // BUG FIX #4: Tambahan filter — abaikan kata yang ada di daftar stopwords
           w.length > 4 && !STOPWORDS.has(w)
         )
@@ -2036,13 +2133,16 @@ if (status === "danger") {
  
       // Upsert update secara batch
       if (toUpdate.length > 0) {
-        for (const u of toUpdate) {
-          await supabase
-            .from("learned_patterns")
-            .update({ count: u.count })
-            .eq("id", u.id);
-        }
-      }
+        if (toUpdate.length > 0) {
+  const updates = toUpdate.map(u => ({
+    id: u.id,
+    count: u.count
+  }));
+
+  await supabase
+    .from("learned_patterns")
+    .upsert(updates);
+}
  
       // Insert baru secara batch sekaligus
       if (toInsert.length > 0) {
