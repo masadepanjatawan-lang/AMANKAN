@@ -2319,6 +2319,7 @@ label.textContent =
           .from('visitors')
           .insert([{ date: today, count: 1 }]);
       }
+      try {
     } catch (e) {
       console.log("trackVisitorFallback exception:", e);
     }
