@@ -2145,17 +2145,17 @@ label.textContent =
     }, 100);
   }
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@amankansupabase/amankansupabase-js@2"></script>
  
 <script>
-  const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
-  const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
+  const amankansupabaseUrl = "https://zpxtvgijtpwvintwpkqb.amankansupabase.co";
+  const amankansupabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
  
-  if (!window.supabaseClient) {
-    window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+  if (!window.amankansupabaseClient) {
+    window.amankansupabaseClient = window.amankansupabase.createClient(amankansupabaseUrl, supabaseKey);
   }
  
-  const supabase = window.supabaseClient;
+  const amankanSupabase = window.amankansupabaseClient;
  
   // FIX #2: Panggil loadLearnedPatterns saat halaman selesai dimuat
   window.addEventListener("load", () => {
