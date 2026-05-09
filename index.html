@@ -975,13 +975,16 @@
  
       // FIX #2: learnedKeywords sudah pasti siap di sini karena sudah ditunggu
       learnedKeywords.forEach(word => {
-        if (text.includes(word)) {
-          score -= 10;
-          dangerCount++;
-          reasons.push(`Pola scam terdeteksi: "${word}"`);
-        }
-      });
- 
+  if (text.includes(word)) {
+
+    addDanger(
+      `learned_${word}`,
+      10,
+      `Pola scam terdeteksi: "${word}"`
+    );
+
+  }
+});
       // ─── APPLY LEARNED PATTERNS ──────────────────────
  
       // Kata bahaya — bobot tinggi
@@ -1283,12 +1286,13 @@ const socialScamPatterns = [
 
 socialScamPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 18;
-    dangerCount++;
 
-    reasons.push(
+    addDanger(
+      pattern,
+      18,
       `Pola scam sosial media terdeteksi: "${pattern}"`
     );
+
   }
 });
 // ─── ROMANCE SCAM DETECTION ─────────────────────────
@@ -1307,12 +1311,13 @@ const romanceScamPatterns = [
 
 romanceScamPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 20;
-    dangerCount++;
 
-    reasons.push(
+    addDanger(
+      pattern,
+      20,
       `Pola manipulasi emosional terdeteksi: "${pattern}"`
     );
+
   }
 });
 // tekanan emosional
@@ -1327,20 +1332,30 @@ const emotionalPressurePatterns = [
 ];
 
 emotionalPressurePatterns.forEach(pattern => {
-  if (text.includes(pattern)) {
-    score -= 18;
-    dangerCount++;
+  if (
+    text.includes(pattern) &&
+    (
+      text.includes("uang") ||
+      text.includes("transfer") ||
+      text.includes("otp")
+    )
+  ) {
 
-    reasons.push(
+    addDanger(
+      pattern,
+      18,
       `Tekanan emosional terdeteksi: "${pattern}"`
     );
+
   }
 });
       // Kata urgensi — bobot sedang
       if (text.includes("klik sekarang")) {
-        score -= 15; dangerCount++;
-        reasons.push("Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis");
-      }
+       addDanger(
+  "klik_sekarang",
+  15,
+  "Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis"
+);
       if (text.includes("buruan")) {
         score -= 15; dangerCount++;
         reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
@@ -1595,16 +1610,13 @@ const investasiScamPatterns = [
 
 investasiScamPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 25;
 
-if (!detectedPatterns.has(pattern)) {
-  detectedPatterns.add(pattern);
-  dangerCount++;
-}
-
-    reasons.push(
+    addDanger(
+      pattern,
+      25,
       `Pola investasi mencurigakan terdeteksi: "${pattern}"`
     );
+
   }
 });
 // ─── PINJOL / LOAN SCAM DETECTION ─────────────────────────
@@ -1628,12 +1640,13 @@ const pinjolScamPatterns = [
 
 pinjolScamPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 18;
-    dangerCount++;
 
-    reasons.push(
+    addDanger(
+      pattern,
+      18,
       `Pola pinjaman mencurigakan terdeteksi: "${pattern}"`
     );
+
   }
 });
 
@@ -1648,12 +1661,13 @@ if (
     text.includes("dana cair")
   )
 ) {
-  score -= 30;
-  dangerCount++;
 
-  reasons.push(
+  addDanger(
+    "pinjol_identity_request",
+    30,
     "Permintaan data identitas dalam konteks pinjaman — berisiko tinggi"
   );
+
 }
 // kombinasi investasi + tanpa risiko
 if (
