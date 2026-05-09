@@ -2166,18 +2166,11 @@ label.textContent =
   // Sebelumnya: loop per kata → N request ke DB
   // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
  
-    async function saveLearnedPatterns(input, dangerCount) {
+   async function saveLearnedPatterns(input, dangerCount) {
   try {
 
     const STOPWORDS = new Set([
-      'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'dengan', 'yang',
-      'dalam', 'tidak', 'akan', 'sudah', 'harus', 'kepada', 'semua', 'lebih',
-      'masih', 'setelah', 'kalau', 'karena', 'sekarang', 'jangan', 'anda',
-      'saya', 'kami', 'mereka', 'kamu', 'namun', 'tetapi', 'juga', 'atau',
-      'dari', 'this', 'that', 'with', 'your', 'have', 'been', 'will', 'from',
-      'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than',
-      'banget', 'cepat', 'gratisan', 'resmi', 'admin', 'akun',
-      'website', 'promo', 'transfer'
+      'kerja','online','gratis','dapat','bisa','untuk'
     ]);
 
     const words = [...new Set(
@@ -2198,9 +2191,7 @@ label.textContent =
       .select("id, word, count")
       .in("word", words);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     const existingMap = {};
 
@@ -2231,21 +2222,14 @@ label.textContent =
 
     });
 
-    // update batch
     if (toUpdate.length > 0) {
-
-      const updates = toUpdate.map(item => ({
-        id: item.id,
-        count: item.count
-      }));
 
       await supabase
         .from("learned_patterns")
-        .upsert(updates);
+        .upsert(toUpdate);
 
     }
 
-    // insert batch
     if (toInsert.length > 0) {
 
       await supabase
@@ -2290,7 +2274,7 @@ async function saveToDatabase(input, type, data) {
     if (error) {
 
       console.log("❌ Supabase ERROR:", error.message);
-      throw new Error(error.message);
+      throw error;
 
     }
 
@@ -2299,7 +2283,6 @@ async function saveToDatabase(input, type, data) {
   } catch (e) {
 
     console.log("❌ Exception:", e);
-    throw e;
 
   }
 
