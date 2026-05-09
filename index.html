@@ -2200,7 +2200,9 @@ label.textContent =
         .in("word", words);
  
       const existingMap = {};
-      (existing || []).forEach(d => { existingMap[d.word] = d; });
+    (existing || []).forEach(item => {
+  existingMap[item.word] = item;
+});
  
       // Pisahkan kata yang perlu diupdate vs diinsert baru
       const toUpdate = [];
