@@ -2263,7 +2263,6 @@ label.textContent =
       const { error } = await supabase
         .from('scans')
         .insert([payload]);
- try {
       if (error) {
         console.log("❌ Supabase ERROR:", error.message);
         // FIX #8: Lempar error agar bisa ditangkap oleh caller dan ditampilkan sebagai toast
