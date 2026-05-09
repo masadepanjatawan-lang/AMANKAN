@@ -1356,7 +1356,8 @@ emotionalPressurePatterns.forEach(pattern => {
   15,
   "Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis"
 );
-      if (text.includes("buruan")) {
+  }
+        if (text.includes("buruan")) {
         score -= 15; dangerCount++;
         reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
       }
@@ -1445,12 +1446,22 @@ phishingWords.forEach(word => {
   }
 });
        // ─── APK / FILE SCAM DETECTION ─────────────────────────
+if (
+  text.includes(".apk") &&
+  (
+    text.includes("download") ||
+    text.includes("install") ||
+    text.includes("unduh")
+  )
+) {
 
-      if (text.includes(".apk")) {
-        score -= 45;
-        dangerCount++;
-        reasons.push("File APK terdeteksi — sangat berisiko karena bisa berisi malware atau pencuri data");
-      }
+  addDanger(
+    "apk_download",
+    45,
+    "File APK dari sumber tidak jelas terdeteksi — berisiko malware"
+  );
+
+}
 
       if (
         text.includes("kurir") ||
@@ -1458,9 +1469,11 @@ phishingWords.forEach(word => {
         text.includes("resi")
       ) {
         if (text.includes(".apk")) {
-          score -= 35;
-          dangerCount++;
-          reasons.push("Kombinasi kurir/paket + file APK sangat mirip modus penipuan malware");
+        addDanger(
+  "apk_kurir_scam",
+  35,
+  "Kombinasi kurir/paket + file APK sangat mirip modus penipuan malware"
+);
         }
       }
 
