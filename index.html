@@ -846,32 +846,39 @@
   // ─── AUTO LEARNING SYSTEM ─────────────────────────
   let learnedKeywords = [];
  
-  async function loadLearnedPatterns() {
-    try {
-      const { data, error } = await supabase
-        .from("learned_patterns")
-        .select("word, count");
- 
-      if (error) {
-        console.log("load error:", error);
-        // FIX #2: Tandai tetap loaded meski error, agar analyze tidak terblokir
-        patternsLoaded = true;
-        return;
-      }
- 
-      learnedKeywords = data
-        .filter(d => d.count >= 2)
-        .map(d => d.word);
- 
-      console.log("🔥 Loaded learned keywords:", learnedKeywords);
- 
-    } catch (e) {
-      console.log("exception:", e);
-    } finally {
-      // FIX #2: Selalu tandai selesai dimuat, berhasil atau tidak
+async function loadLearnedPatterns() {
+
+  try {
+
+    const { data, error } = await supabase
+      .from("learned_patterns")
+      .select("word, count");
+
+    if (error) {
+      console.log("load error:", error);
       patternsLoaded = true;
+      return;
     }
+
+    learnedKeywords = data
+      .filter(d => d.count >= 2)
+      .map(d => d.word);
+
+    console.log("Loaded learned keywords:", learnedKeywords);
+
+  } catch (e) {
+
+    console.log("exception:", e);
+
+  } finally {
+
+    patternsLoaded = true;
+
   }
+
+}
+ 
+   
  
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
