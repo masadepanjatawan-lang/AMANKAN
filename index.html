@@ -1001,8 +1001,12 @@
  
       // gaji mencurigakan
       if (text.includes("gaji") && (text.includes("kerja") || text.includes("online"))) {
-        score -= 15; dangerCount++;
-        reasons.push("Penawaran gaji dalam konteks kerja mencurigakan");
+      addDanger(
+  "gaji_kerja",
+  15,
+  "Penawaran gaji dalam konteks kerja mencurigakan"
+);
+        
       }
  
       // kerja online
@@ -1357,14 +1361,23 @@ emotionalPressurePatterns.forEach(pattern => {
   "Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis"
 );
   }
-        if (text.includes("buruan")) {
-        score -= 15; dangerCount++;
+      if (text.includes("buruan")) {
+
+  addDanger(
+    "buruan",
+    15,
         reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
+        );
       }
       if (text.includes("terakhir")) {
-        score -= 15; dangerCount++;
-        reasons.push("Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir");
-      }
+
+  addDanger(
+    "terakhir",
+    15,
+    "Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir"
+  );
+
+}
      if (
   text.includes("transfer") &&
   (
@@ -1410,12 +1423,11 @@ const fakeBrandDomains = [
 
 fakeBrandDomains.forEach(domain => {
   if (text.includes(domain)) {
-    score -= 30;
-    dangerCount++;
-
-    reasons.push(
-      `Domain mencurigakan meniru brand terkenal: "${domain}"`
-    );
+   addDanger(
+  domain,
+  30,
+  `Domain mencurigakan meniru brand terkenal: "${domain}"`
+);
   }
 });
 
@@ -1514,11 +1526,10 @@ const disguisedFilePatterns = [
 
 disguisedFilePatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 18;
-    dangerCount++;
-
-    reasons.push(
-      `File atau link tersamarkan terdeteksi: "${pattern}"`
+   addDanger(
+  pattern,
+  18,
+  `File atau link tersamarkan terdeteksi: "${pattern}"`
     );
   }
 });
@@ -1725,11 +1736,11 @@ const suspiciousActionPatterns = [
 
 suspiciousActionPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 12;
-    dangerCount++;
-
-    reasons.push(
-      `Ajakan tindakan sensitif terdeteksi: "${pattern}"`
+   addDanger(
+  pattern,
+  12,
+  `Ajakan tindakan sensitif terdeteksi: "${pattern}"`
+);
     );
   }
 });
@@ -1831,11 +1842,10 @@ const unrealisticPatterns = [
 
 unrealisticPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 20;
-    dangerCount++;
-
-    reasons.push(
-      `Janji tidak realistis terdeteksi: "${pattern}"`
+   addDanger(
+  pattern,
+  20, 
+ `Janji tidak realistis terdeteksi: "${pattern}"` 
     );
   }
 });
@@ -1856,11 +1866,10 @@ const fakeTestimoniPatterns = [
 
 fakeTestimoniPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    score -= 15;
-    dangerCount++;
-
-    reasons.push(
-      `Pola testimoni manipulatif terdeteksi: "${pattern}"`
+   addDanger(
+  pattern,
+  15, 
+  `Pola testimoni manipulatif terdeteksi: "${pattern}"`
     );
   }
 });
@@ -2165,8 +2174,11 @@ label.textContent =
       const words = [...new Set(
         input.toLowerCase().split(/\W+/).filter(w => 
           // BUG FIX #4: Tambahan filter — abaikan kata yang ada di daftar stopwords
-          w.length > 4 && !STOPWORDS.has(w)
-        )
+         filter(w =>
+  w.length >= 6 &&
+  /^[a-z]+$/.test(w) &&
+  !STOPWORDS.has(w)
+)
       )];
  
       if (words.length === 0) return;
