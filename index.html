@@ -882,7 +882,7 @@ async function loadLearnedPatterns() {
  
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
-     if (!supabase) {
+   if (!window.supabaseClient) {
     showInlineMessage("⚠️ Database belum siap, coba beberapa detik lagi.");
     return;
   }
@@ -945,8 +945,12 @@ async function loadLearnedPatterns() {
     }, 2500);
  
     // FIX #10: Sembunyikan hasil lama sebelum proses baru dimulai
-    document.getElementById('resultCard').style.display = 'none';
- document.getElementById('resultCard').scrollTop = 0;
+ const resultCard = document.getElementById('resultCard');
+
+if (resultCard) {
+  resultCard.style.display = 'none';
+  resultCard.scrollTop = 0;
+}
     // FIX #2: Tunggu jika learnedKeywords belum siap dimuat (maks 2 detik)
     if (!patternsLoaded) {
       await new Promise(resolve => {
