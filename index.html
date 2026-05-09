@@ -1361,14 +1361,15 @@ emotionalPressurePatterns.forEach(pattern => {
   "Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis"
 );
   }
-      if (text.includes("buruan")) {
+   if (text.includes("buruan")) {
 
   addDanger(
     "buruan",
     15,
-        reasons.push("Kata 'buruan' menciptakan tekanan waktu — ciri khas scam");
-        );
-      }
+    "Kata 'buruan' menciptakan tekanan waktu — ciri khas scam"
+  );
+
+}
       if (text.includes("terakhir")) {
 
   addDanger(
@@ -1376,7 +1377,6 @@ emotionalPressurePatterns.forEach(pattern => {
     15,
     "Indikasi batas waktu palsu — mendorong korban bertindak tanpa pikir"
   );
-
 }
      if (
   text.includes("transfer") &&
@@ -1741,7 +1741,6 @@ suspiciousActionPatterns.forEach(pattern => {
   12,
   `Ajakan tindakan sensitif terdeteksi: "${pattern}"`
 );
-    );
   }
 });
       // ─── ACTION + ACCOUNT PHISHING COMBINATION ─────────────────────────
@@ -2170,15 +2169,15 @@ label.textContent =
       ]);
  
       // Ambil kata-kata yang cukup panjang (> 4 huruf) DAN bukan stopwords
-      if (dangerCount < 3) return;
-      const words = [...new Set(
-        input.toLowerCase().split(/\W+/).filter(w => 
-          // BUG FIX #4: Tambahan filter — abaikan kata yang ada di daftar stopwords
-         filter(w =>
-  w.length >= 6 &&
-  /^[a-z]+$/.test(w) &&
-  !STOPWORDS.has(w)
-)
+     const words = [...new Set(
+  input
+    .toLowerCase()
+    .split(/\W+/)
+    .filter(w =>
+      w.length >= 6 &&
+      /^[a-z]+$/.test(w) &&
+      !STOPWORDS.has(w)
+    )
       )];
  
       if (words.length === 0) return;
