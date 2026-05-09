@@ -1003,44 +1003,65 @@
       }
  
       // kerja online
-      if (text.includes("kerja online")) {
-        score -= 20; dangerCount++;
-        reasons.push("Penawaran kerja online tanpa detail yang jelas memerlukan verifikasi tambahan");
-      }
+    if (text.includes("kerja online")) {
+  addDanger(
+    "kerja online",
+    20,
+    "Penawaran kerja online tanpa detail yang jelas memerlukan verifikasi tambahan"
+  );
+}
  
       // aktivasi akun berbayar
-      if (text.includes("aktivasi akun")) {
-        score -= 25; dangerCount++;
-        reasons.push("Meminta pembayaran untuk aktivasi akun — tidak lazim pada pekerjaan resmi");
-      }
+     if (text.includes("aktivasi akun")) {
+  addDanger(
+    "aktivasi akun",
+    25,
+    "Meminta pembayaran untuk aktivasi akun — tidak lazim pada pekerjaan resmi"
+  );
+}
  
       // kerja ringan hasil besar
-      if (text.includes("1-2 jam") || text.includes("1–2 jam")) {
-        score -= 15; dangerCount++;
-        reasons.push("Janji kerja ringan dengan hasil besar — indikasi tidak realistis");
-      }
+    if (
+  text.includes("1-2 jam") ||
+  text.includes("1–2 jam")
+) {
+  addDanger(
+    "1-2 jam",
+    15,
+    "Janji kerja ringan dengan hasil besar — indikasi tidak realistis"
+  );
+}
  
       // biaya admin
-      if (text.includes("biaya admin")) {
-        score -= 30; dangerCount++;
-        reasons.push("Meminta biaya admin — variasi lain dari deposit scam");
-      }
+     if (text.includes("biaya admin")) {
+  addDanger(
+    "biaya admin",
+    30,
+    "Meminta biaya admin — variasi lain dari deposit scam"
+  );
+}
  
       // tanpa pengalaman
-      if (text.includes("tanpa pengalaman")) {
-        score -= 15; dangerCount++;
-        reasons.push("Frasa 'tanpa pengalaman' sering digunakan pada promosi kerja yang perlu diverifikasi");
-      }
+     if (text.includes("tanpa pengalaman")) {
+  addDanger(
+    "tanpa pengalaman",
+    15,
+    "Frasa 'tanpa pengalaman' sering digunakan pada promosi kerja yang perlu diverifikasi"
+  );
+}
  
       // langsung cair
-      if (
-        text.includes("langsung cair") ||
-        text.includes("langsung dibayar") ||
-        text.includes("langsung dapat")
-      ) {
-        score -= 15; dangerCount++;
-        reasons.push("Janji hasil instan — indikasi tidak realistis");
-      }
+    if (
+  text.includes("langsung cair") ||
+  text.includes("langsung dibayar") ||
+  text.includes("langsung dapat")
+) {
+  addDanger(
+    "langsung cair",
+    15,
+    "Janji hasil instan — indikasi tidak realistis"
+  );
+}
  
      if (text.includes("transfer")) {
   addDanger(
@@ -1049,7 +1070,7 @@
     "Mengandung instruksi transfer uang — pola umum penipuan finansial"
   );
 }
-   if (
+ if (
   text.includes("gratis") &&
   (
     text.includes("hadiah") ||
@@ -1058,13 +1079,13 @@
     text.includes("dana gratis")
   )
 ) {
- 
-  score -= 25;
-  dangerCount++;
 
-  reasons.push(
+  addDanger(
+    "gratis_manipulatif",
+    25,
     "Penawaran gratis dengan pola manipulatif terdeteksi"
   );
+
 }
 
 if (
@@ -1076,14 +1097,14 @@ if (
     text.includes("kode")
   )
 ) {
-  score -= 25;
-  dangerCount++;
 
-  reasons.push(
+  addDanger(
+    "otp_request",
+    25,
     "Permintaan OTP terdeteksi — sangat berisiko jika diminta pihak lain"
   );
-}
 
+}
 if (
   text.includes("password") &&
   (
@@ -1092,12 +1113,13 @@ if (
     text.includes("masukkan")
   )
 ) {
-  score -= 25;
-  dangerCount++;
 
-  reasons.push(
+  addDanger(
+    "password_request",
+    25,
     "Permintaan password secara langsung terdeteksi — tindakan berisiko tinggi"
   );
+
 }
  // ─── SOCIAL ENGINEERING DETECTION ─────────────────────────
 
@@ -1162,12 +1184,13 @@ if (
     text.includes("admin")
   )
 ) {
-  score -= 40;
-  dangerCount++;
 
-  reasons.push(
+  addDanger(
+    "fake_cs_otp",
+    40,
     "Customer service meminta OTP — sangat berbahaya"
   );
+
 }
       // ─── HUMAN MANUAL SCAM DETECTION ─────────────────────────
 
