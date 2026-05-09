@@ -2341,10 +2341,7 @@ async function saveToDatabase(input, type, data) {
           .from('visitors')
           .insert([{ date: today, count: 1 }]);
       }
-      try {
-    } catch (e) {
-      console.log("trackVisitorFallback exception:", e);
-    }
+    
   }
  
   // Panggil saat halaman pertama kali dibuka
