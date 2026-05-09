@@ -2165,117 +2165,145 @@ label.textContent =
   // FIX #4: Optimalkan saveLearnedPatterns dengan batch upsert
   // Sebelumnya: loop per kata → N request ke DB
   // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
- async function saveLearnedPatterns(input, dangerCount) {
-    try {
-      // BUG FIX #4: Daftar kata umum yang tidak relevan (stopwords bahasa Indonesia & Inggris)
-      // Kata-kata ini terlalu generik dan akan merusak akurasi analisa jika disimpan
-      const STOPWORDS = new Set([
-        'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'dengan', 'yang',
-        'dalam', 'tidak', 'akan', 'sudah', 'harus', 'kepada', 'semua', 'lebih',
-        'masih', 'setelah', 'kalau', 'karena', 'sekarang', 'jangan', 'anda',
-        'saya', 'kami', 'mereka', 'kamu', 'namun', 'tetapi', 'juga', 'atau',
-        'dari', 'this', 'that', 'with', 'your', 'have', 'been', 'will', 'from',
-        'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than','banget',
-        'cepat', 'gratisan', 'resmi', 'admin', 'akun', 'website', 'promo', 'transfer'
-      ]);
  
-      // Ambil kata-kata yang cukup panjang (> 4 huruf) DAN bukan stopwords
-     const words = [...new Set(
-  input
-    .toLowerCase()
-    .split(/\W+/)
-    .filter(w =>
-      w.length >= 6 &&
-      /^[a-z]+$/.test(w) &&
-      !STOPWORDS.has(w)
-    )
-      )];
- 
-      if (words.length === 0) return;
- 
-      // Fetch semua kata yang sudah ada dalam satu query (bukan loop)
-      const { data: existing } = await supabase
-        .from("learned_patterns")
-        .select("id, word, count")
-        .in("word", words);
- 
-      const existingMap = {};
-    (existing || []).forEach(item => {
-  existingMap[item.word] = item;
-});
- 
-      // Pisahkan kata yang perlu diupdate vs diinsert baru
-      const toUpdate = [];
-      const toInsert = [];
- 
-      words.forEach(w => {
-        if (existingMap[w]) {
-          toUpdate.push({ id: existingMap[w].id, count: existingMap[w].count + 1 });
-        } else {
-          toInsert.push({ word: w, count: 1 });
-        }
-      });
- 
-      // Upsert update secara batch
-      if (toUpdate.length > 0) {
-  const updates = toUpdate.map(u => ({
-    id: u.id,
-    count: u.count
-  }));
+    async function saveLearnedPatterns(input, dangerCount) {
+  try {
 
-  await supabase
-    .from("learned_patterns")
-    .upsert(updates);
-}
- 
-      // Insert baru secara batch sekaligus
-      if (toInsert.length > 0) {
-        await supabase
-          .from("learned_patterns")
-          .insert(toInsert);
-      
- }
-    } catch (e) {
-      console.log("save learning error:", e);
+    const STOPWORDS = new Set([
+      'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'dengan', 'yang',
+      'dalam', 'tidak', 'akan', 'sudah', 'harus', 'kepada', 'semua', 'lebih',
+      'masih', 'setelah', 'kalau', 'karena', 'sekarang', 'jangan', 'anda',
+      'saya', 'kami', 'mereka', 'kamu', 'namun', 'tetapi', 'juga', 'atau',
+      'dari', 'this', 'that', 'with', 'your', 'have', 'been', 'will', 'from',
+      'they', 'were', 'more', 'very', 'just', 'also', 'some', 'only', 'than',
+      'banget', 'cepat', 'gratisan', 'resmi', 'admin', 'akun',
+      'website', 'promo', 'transfer'
+    ]);
+
+    const words = [...new Set(
+      input
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(w =>
+          w.length >= 6 &&
+          /^[a-z]+$/.test(w) &&
+          !STOPWORDS.has(w)
+        )
+    )];
+
+    if (words.length === 0) return;
+
+    const { data: existing, error } = await supabase
+      .from("learned_patterns")
+      .select("id, word, count")
+      .in("word", words);
+
+    if (error) {
+      throw error;
     }
-  }
- 
-  async function saveToDatabase(input, type, data) {
-    try {
-      if (!input || !data) {
-        console.log("❌ Data tidak valid");
-        return;
-      }
- 
-      const payload = {
-        input: input,
-        type: type,
-        status: data.status,
-        score: data.score,
-        confidence: data.confidence,
-        summary: data.summary,
-        singkat: data.singkat,
-        reasons: JSON.stringify(data.reasons || []),
-        suggestions: JSON.stringify(data.suggestions || []),
-        created_at: new Date().toISOString()
-      };
- 
-      const { error } = await supabase
-        .from('scans')
-        .insert([payload]);
-      if (error) {
-        console.log("❌ Supabase ERROR:", error.message);
-        // FIX #8: Lempar error agar bisa ditangkap oleh caller dan ditampilkan sebagai toast
-        throw new Error(error.message);
+
+    const existingMap = {};
+
+    (existing || []).forEach(item => {
+      existingMap[item.word] = item;
+    });
+
+    const toUpdate = [];
+    const toInsert = [];
+
+    words.forEach(word => {
+
+      if (existingMap[word]) {
+
+        toUpdate.push({
+          id: existingMap[word].id,
+          count: existingMap[word].count + 1
+        });
+
       } else {
-        console.log("✅ Data berhasil masuk ke Supabase");
-      
- }
-     catch (e) {
-      console.log("❌ Exception:", e);
-      throw e; // Re-throw agar ditangkap di analyze()
+
+        toInsert.push({
+          word: word,
+          count: 1
+        });
+
+      }
+
+    });
+
+    // update batch
+    if (toUpdate.length > 0) {
+
+      const updates = toUpdate.map(item => ({
+        id: item.id,
+        count: item.count
+      }));
+
+      await supabase
+        .from("learned_patterns")
+        .upsert(updates);
+
     }
+
+    // insert batch
+    if (toInsert.length > 0) {
+
+      await supabase
+        .from("learned_patterns")
+        .insert(toInsert);
+
+    }
+
+  } catch (e) {
+
+    console.log("save learning error:", e);
+
   }
+}
+
+async function saveToDatabase(input, type, data) {
+
+  try {
+
+    if (!input || !data) {
+      console.log("❌ Data tidak valid");
+      return;
+    }
+
+    const payload = {
+      input: input,
+      type: type,
+      status: data.status,
+      score: data.score,
+      confidence: data.confidence,
+      summary: data.summary,
+      singkat: data.singkat,
+      reasons: JSON.stringify(data.reasons || []),
+      suggestions: JSON.stringify(data.suggestions || []),
+      created_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from("scans")
+      .insert([payload]);
+
+    if (error) {
+
+      console.log("❌ Supabase ERROR:", error.message);
+      throw new Error(error.message);
+
+    }
+
+    console.log("✅ Data berhasil masuk ke Supabase");
+
+  } catch (e) {
+
+    console.log("❌ Exception:", e);
+    throw e;
+
+  }
+
+}
  
   // FIX #3: Gunakan upsert berdasarkan kolom unik 'date' untuk menghindari race condition
   // Sebelumnya: select → insert/update terpisah → rentan duplikasi saat akses paralel
