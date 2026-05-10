@@ -1,10 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AMANKAN — Anti Scam Checker</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+ <meta charset="UTF-8" />
   <style>
     :root {
       --bg: #0a0b0f;
@@ -861,7 +858,7 @@ async function loadLearnedPatterns() {
     }
 
     learnedKeywords = data
-      .filter(d => d.count >= 2)
+     .filter(d => d.count >= 5)
       .map(d => d.word);
 
     console.log("Loaded learned keywords:", learnedKeywords);
@@ -1539,7 +1536,7 @@ disguisedFilePatterns.forEach(pattern => {
   if (text.includes(pattern)) {
    addDanger(
   pattern,
-  18,
+  8,
   `File atau link tersamarkan terdeteksi: "${pattern}"`
     );
   }
@@ -1578,7 +1575,7 @@ if (
   /^https:\/\/(www\.)?google\.com(\/|$)/.test(text)
 ) {
   score += 10;
-
+score = Math.min(score, 95);
   reasons.push(
     "Mengandung domain yang umum digunakan layanan Google"
   );
@@ -1617,7 +1614,7 @@ if (dangerCount >= 4) {
   );
 }
 
-if (dangerCount >= 6) {
+if (dangerCount >= 8) {
   score -= 20;
 
   reasons.push(
@@ -1976,8 +1973,8 @@ if (status === "danger") {
       };
  
       const rndIdx = (arr) => Math.floor(Math.random() * arr.length);
-      const summary = summaryOptions[status][rndIdx(summaryOptions[status])];
-      const singkat = singkatOptions[status][rndIdx(singkatOptions[status])];
+   const summary = summaryOptions[status][0];
+const singkat = singkatOptions[status][0];
  
       // ─── FINAL DATA ──────────────────────────────────────────────────────────
       const data = {
@@ -1992,7 +1989,7 @@ if (status === "danger") {
  
       // FIX #8: Tangani error DB dengan toast ringan, tidak memblokir alur utama
       try {
-        await saveToDatabase(input, type, data);
+       await saveToDatabase(safeInput, type, data);
       } catch (e) {
         console.log("DB error:", e);
         // Tampilkan notifikasi ringan tanpa mengganggu user
@@ -2145,17 +2142,17 @@ label.textContent =
     }, 100);
   }
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/@amankansupabase/amankansupabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  
 <script>
-  const amankansupabaseUrl = "https://zpxtvgijtpwvintwpkqb.amankansupabase.co";
-  const amankansupabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
+  const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
+  const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
  
-  if (!window.amankansupabaseClient) {
-    window.amankansupabaseClient = window.amankansupabase.createClient(amankansupabaseUrl, supabaseKey);
+  if (!window.supabaseClient) {
+    window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
   }
  
-  const amankanSupabase = window.amankansupabaseClient;
+ const supabase = window.supabaseClient;
  
   // FIX #2: Panggil loadLearnedPatterns saat halaman selesai dimuat
   window.addEventListener("load", () => {
