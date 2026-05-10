@@ -694,7 +694,9 @@
   const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
  
   // PERBAIKAN: Hanya satu deklarasi supabase, menggunakan window.supabase.createClient
-  if (!window.supabaseClient) {
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    console.error('Supabase SDK gagal dimuat.');
+  } else if (!window.supabaseClient) {
     window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
   }
  
@@ -1996,7 +1998,7 @@
   function renderFallback(quickRisk) {
     const fallbacks = {
       HIGH: {
-        riskLevel: 'HIGH',
+        status: 'danger',
         summary: 'Terdeteksi pola yang sering digunakan dalam penipuan digital.',
         confidence: 78,
         reasons: ['Mengandung kata kunci penipuan umum', 'Pola mendesak untuk bertindak cepat', 'Tawaran yang tidak realistis'],
@@ -2004,7 +2006,7 @@
         singkat: 'terlalu berisiko, lebih baik abaikan saja.'
       },
       MEDIUM: {
-        riskLevel: 'MEDIUM',
+        status: 'warning',
         summary: 'Ada beberapa indikasi yang perlu diwaspadai, meskipun belum pasti penipuan.',
         confidence: 65,
         reasons: ['Beberapa elemen terlihat tidak lazim', 'Identitas pengirim tidak jelas', 'Perlu verifikasi lebih lanjut'],
@@ -2012,7 +2014,7 @@
         singkat: 'jangan terburu-buru, cek dulu ke sumber resminya.'
       },
       LOW: {
-        riskLevel: 'LOW',
+        status: 'low_risk',
         summary: 'Tidak ditemukan indikasi penipuan yang jelas dari input ini.',
         confidence: 82,
         reasons: ['Tidak ada kata kunci penipuan', 'Struktur terlihat normal', 'Tidak ada urgensi mencurigakan'],
@@ -2031,7 +2033,6 @@
   }
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
-  renderLimitUI();
  
   function handleClick() {
     // BUG FIX #1: Blokir klik ganda — cek flag di awal
@@ -2218,6 +2219,8 @@
  
   // FIX #2: Panggil loadLearnedPatterns dan trackVisitor saat halaman selesai dimuat
   window.addEventListener("load", () => {
+    renderLimitUI();
+    updateCharCount();
     loadLearnedPatterns();
     trackVisitor();
   });
