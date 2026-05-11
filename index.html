@@ -1007,6 +1007,12 @@ const db = window.supabaseClient;
       function sanitizeIndicator(value = "") {
         return value.replace(/https?:\/\//gi, "").replace(/\bhttps?\b/gi, "").trim();
       }
+
+      function buildQuotedReason(prefix, indicator) {
+        const cleaned = sanitizeIndicator(indicator);
+        if (!cleaned) return "";
+        return `${prefix}: "${cleaned}"`;
+      }
  
       function applyCappedPenalty(category, penalty) {
         if (!category || !categoryCaps[category]) return penalty;
@@ -1076,10 +1082,14 @@ const db = window.supabaseClient;
         if (count < learnedMinConfidence) return;
         if (learnedWhitelist.includes(word)) return;
         if (text.includes(word)) {
+          const learnedReason = buildQuotedReason(
+            "Ditemukan pola komunikasi yang pernah muncul pada laporan berisiko",
+            word
+          );
           addDanger(
             `learned_${word}`,
             6,
-            `Ditemukan pola komunikasi yang pernah muncul pada laporan berisiko: "${sanitizeIndicator(word)}"`,
+            learnedReason,
             { category: 'social_engineering', keyword: word }
           );
         }
@@ -2051,14 +2061,20 @@ if (
       }
 
       const toList = (setObj, limit = 3) => Array.from(setObj).map(sanitizeIndicator).filter(Boolean).slice(0, limit).join(", ");
-      if (detectedCategories.identity.size > 0) reasons.push(`Permintaan data identitas pribadi terindikasi (${toList(detectedCategories.identity)})`);
-      if (detectedCategories.urgency.size > 0) reasons.push(`Tekanan waktu terindikasi (${toList(detectedCategories.urgency)})`);
-      if (detectedCategories.pressure.size > 0) reasons.push(`Tekanan sosial/emosional terindikasi (${toList(detectedCategories.pressure)})`);
-      if (detectedCategories.transfer.size > 0) reasons.push(`Permintaan transaksi finansial terindikasi (${toList(detectedCategories.transfer)})`);
-      if (detectedCategories.phishing.size > 0) reasons.push(`Terdapat tautan atau domain yang tidak umum/sulit diverifikasi (${toList(detectedCategories.phishing)})`);
-      if (detectedCategories.malware.size > 0) reasons.push(`Indikasi file/aplikasi berisiko terdeteksi (${toList(detectedCategories.malware)})`);
-      if (detectedCategories.social_engineering.size > 0) reasons.push(`Terlihat kombinasi pola manipulasi yang mendorong keputusan cepat (${toList(detectedCategories.social_engineering)})`);
-      if (detectedCategories.financial.size > 0) reasons.push(`Pola transaksi finansial sensitif terindikasi (${toList(detectedCategories.financial)})`);
+      const pushCategoryReason = (setObj, template) => {
+        const cleanedIndicators = toList(setObj);
+        if (!cleanedIndicators) return;
+        reasons.push(template(cleanedIndicators));
+      };
+
+      pushCategoryReason(detectedCategories.identity, (items) => `Permintaan data identitas pribadi terindikasi (${items})`);
+      pushCategoryReason(detectedCategories.urgency, (items) => `Tekanan waktu terindikasi (${items})`);
+      pushCategoryReason(detectedCategories.pressure, (items) => `Tekanan sosial/emosional terindikasi (${items})`);
+      pushCategoryReason(detectedCategories.transfer, (items) => `Permintaan transaksi finansial terindikasi (${items})`);
+      pushCategoryReason(detectedCategories.phishing, (items) => `Terdapat tautan atau domain yang tidak umum/sulit diverifikasi (${items})`);
+      pushCategoryReason(detectedCategories.malware, (items) => `Indikasi file/aplikasi berisiko terdeteksi (${items})`);
+      pushCategoryReason(detectedCategories.social_engineering, (items) => `Terlihat kombinasi pola manipulasi yang mendorong keputusan cepat (${items})`);
+      pushCategoryReason(detectedCategories.financial, (items) => `Pola transaksi finansial sensitif terindikasi (${items})`);
       if (detectedCategories.identity.size > 0 && detectedCategories.urgency.size > 0) reasons.push("Permintaan identitas disertai tekanan waktu memiliki pola social engineering");
       if (detectedCategories.identity.size > 0 && detectedCategories.transfer.size > 0) reasons.push("Kombinasi transaksi + identitas memiliki pola social engineering");
 
