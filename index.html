@@ -986,14 +986,38 @@ const db = window.supabaseClient;
       let reasons = [];
       let suggestions = [];
       let dangerCount = 0;
+      let totalRisk = 0;
       const detectedPatterns = new Set();
+      const rawReasons = [];
+      const categoryPenaltyApplied = new Set();
+      const categoryWeights = { phishing: 18, malware: 30, identity: 10, urgency: 5, pressure: 5, social_engineering: 12, financial: 16, transfer: 8 };
+      const detectedCategories = { identity: new Set(), urgency: new Set(), pressure: new Set(), transfer: new Set(), phishing: new Set(), malware: new Set(), social_engineering: new Set(), financial: new Set(), otp: new Set(), phishing_bank: new Set(), remote_access: new Set(), fake_cs: new Set() };
+
+      function trackCategory(category, keyword) {
+        if (detectedCategories[category]) detectedCategories[category].add(keyword);
+      }
  
-      function addDanger(pattern, penalty, reason) {
+      function addDanger(pattern, penalty, reason, options = {}) {
         if (!detectedPatterns.has(pattern)) {
           detectedPatterns.add(pattern);
           score -= penalty;
+          addRisk(penalty);
           dangerCount++;
-          reasons.push(reason);
+          if (reason) rawReasons.push(reason);
+          if (options.category) trackCategory(options.category, options.keyword || pattern);
+        }
+      }
+
+      function addRisk(points) {
+        totalRisk += points;
+      }
+
+      function applyCategoryPenalty(category, penalty) {
+        if (detectedCategories[category].size > 0 && !categoryPenaltyApplied.has(category)) {
+          score -= penalty;
+          addRisk(penalty);
+          categoryPenaltyApplied.add(category);
+          dangerCount++;
         }
       }
  
@@ -1090,11 +1114,7 @@ const db = window.supabaseClient;
       }
  
       if (text.includes("transfer")) {
-        addDanger(
-          "transfer",
-          25,
-          "Mengandung instruksi transfer uang — pola berisiko pada penipuan finansial"
-        );
+        addDanger("transfer", 10, "", { category: "transfer", keyword: "transfer" });
       }
  
       if (
@@ -1125,7 +1145,8 @@ const db = window.supabaseClient;
         addDanger(
           "otp_request",
           25,
-          "Permintaan OTP terindikasi — berpotensi berisiko jika diminta pihak lain"
+          "Permintaan OTP terindikasi — berpotensi berisiko jika diminta pihak lain",
+          { category: "otp", keyword: "otp" }
         );
       }
  
@@ -1214,7 +1235,8 @@ const db = window.supabaseClient;
         addDanger(
           "fake_cs_otp",
           40,
-          "Pihak yang mengatasnamakan layanan pelanggan meminta OTP — perlu kehati-hatian tinggi"
+          "Pihak yang mengatasnamakan layanan pelanggan meminta OTP — perlu kehati-hatian tinggi",
+          { category: "fake_cs", keyword: "cs+otp" }
         );
       }
  
@@ -1259,11 +1281,7 @@ const identityRequestPatterns = [
 
 identityRequestPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    addDanger(
-      pattern,
-      25,
-      `Permintaan data identitas terindikasi: "${pattern}"`
-    );
+    addDanger(`identity_${pattern}`, 10, "", { category: "identity", keyword: pattern });
   }
 });
 
@@ -1283,11 +1301,7 @@ const urgencyPatterns = [
 
 urgencyPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    addDanger(
-      pattern,
-      12,
-      `Tekanan waktu terindikasi: "${pattern}"`
-    );
+    addDanger(`urgency_${pattern}`, 8, "", { category: "urgency", keyword: pattern });
   }
 });
 
@@ -1310,6 +1324,8 @@ if (
   reasons.push(
     "Kombinasi transaksi + permintaan identitas terindikasi berisiko tinggi"
   );
+  trackCategory("social_engineering", "transaksi+identitas");
+  trackCategory("financial", "transaksi sensitif");
 }
 
 // kombinasi urgency + identitas
@@ -1331,6 +1347,7 @@ if (
   reasons.push(
     "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering"
   );
+  trackCategory("social_engineering", "identitas+urgensi");
 }
  
       // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
@@ -1484,16 +1501,13 @@ if (
  
       // Domain & link mencurigakan
       if (text.includes(".xyz")) {
-        score -= 20; dangerCount++;
-        reasons.push("Domain .xyz memerlukan verifikasi tambahan karena cukup sering digunakan pada situs sementara atau anonim");
+        addDanger("domain_xyz", 12, "", { category: "phishing", keyword: ".xyz" });
       }
       if (text.includes("bit.ly")) {
-        score -= 15; dangerCount++;
-        reasons.push("Link dipersingkat dengan bit.ly — menyembunyikan tujuan asli URL");
+        addDanger("shortlink_bitly", 10, "", { category: "phishing", keyword: "bit.ly" });
       }
       if (text.includes("tinyurl")) {
-        score -= 20; dangerCount++;
-        reasons.push("Link dipersingkat dengan tinyurl — tujuan asli tidak transparan");
+        addDanger("shortlink_tinyurl", 10, "", { category: "phishing", keyword: "tinyurl" });
       }
  
       // ─── FAKE BRAND DOMAIN DETECTION ─────────────────────────
@@ -1514,7 +1528,8 @@ if (
           addDanger(
             domain,
             30,
-            `Domain mencurigakan meniru brand terkenal: "${domain}"`
+            `Domain mencurigakan meniru brand terkenal: "${domain}"`,
+            { category: "phishing_bank", keyword: domain }
           );
         }
       });
@@ -1555,7 +1570,8 @@ if (
         addDanger(
           "apk_download",
           45,
-          "File APK dari sumber tidak jelas terindikasi — berpotensi berisiko malware"
+          "File APK dari sumber tidak jelas terindikasi — berpotensi berisiko malware",
+          { category: "malware", keyword: "apk" }
         );
       }
  
@@ -1568,7 +1584,8 @@ if (
           addDanger(
             "apk_kurir_scam",
             35,
-            "Kombinasi kurir/paket + file APK memiliki kemiripan dengan modus malware"
+            "Kombinasi kurir/paket + file APK memiliki kemiripan dengan modus malware",
+            { category: "malware", keyword: "apk kurir" }
           );
         }
       }
@@ -1591,6 +1608,14 @@ if (
         reasons.push("Modus paket bermasalah sering digunakan dalam penipuan digital");
       }
  
+
+      const remoteAccessPatterns = ["anydesk", "teamviewer", "remote access", "quicksupport", "ultraviewer"];
+      remoteAccessPatterns.forEach(pattern => {
+        if (text.includes(pattern)) {
+          addDanger(`remote_${pattern}`, 28, `Permintaan akses jarak jauh terindikasi: "${pattern}"`, { category: "remote_access", keyword: pattern });
+        }
+      });
+
       // ─── DISGUISED FILE SCAM DETECTION ─────────────────────────
       const disguisedFilePatterns = [
         ".zip",
@@ -1896,23 +1921,66 @@ if (
         }
       });
  
+      // ─── CATEGORY SEVERITY BALANCING ─────────────────────────
+      Object.entries(categoryWeights).forEach(([category, weight]) => {
+        applyCategoryPenalty(category, weight);
+      });
+
       // FIX #7: Normalisasi skor dengan batas minimum lebih realistis (5, bukan 20)
       // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
       score = Math.max(5, Math.min(95, score));
+      totalRisk = Math.max(totalRisk, Math.min(100, 100 - score));
       console.log("TOTAL dangerCount:", dangerCount);
+      console.log("TOTAL risk score:", totalRisk);
  
-      // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
+      // ─── KLASIFIKASI STATUS BERDASARKAN CUMULATIVE RISK ─────────────────────
       let status;
-      if (score >= 85) {
-        status = "low_risk";
-      } else if (score >= 45) {
+      if (totalRisk >= 70) {
+        status = "danger";
+      } else if (totalRisk >= 40) {
         status = "warning";
       } else {
-        status = "danger";
+        status = "low_risk";
       }
  
       // Nilai ini adalah estimasi tingkat kewaspadaan berbasis aturan, bukan kepastian mutlak.
-      const confidence = Math.round(100 - score);
+      const severityPriority = {
+        critical: ["malware", "otp", "phishing_bank", "remote_access"],
+        high: ["phishing", "financial", "fake_cs"],
+        medium: ["identity", "social_engineering"],
+        low: ["urgency", "pressure"]
+      };
+
+      const hasSeverity = (level) => severityPriority[level].some((cat) => detectedCategories[cat] && detectedCategories[cat].size > 0);
+      const isCriticalPattern = hasSeverity("critical") || (text.includes("akun akan diblokir") && detectedCategories.identity.size > 0);
+
+      let confidence;
+      if (isCriticalPattern) {
+        confidence = Math.min(98, Math.max(88, Math.round(totalRisk)));
+      } else if (hasSeverity("high")) {
+        confidence = Math.min(90, Math.max(75, Math.round(totalRisk)));
+      } else if (hasSeverity("medium")) {
+        confidence = Math.min(75, Math.max(40, Math.round(totalRisk)));
+      } else {
+        confidence = Math.min(35, Math.max(10, Math.round(totalRisk)));
+      }
+
+      const toList = (setObj, limit = 3) => Array.from(setObj).slice(0, limit).join(", ");
+      if (detectedCategories.identity.size > 0) reasons.push(`Permintaan data identitas pribadi terindikasi (${toList(detectedCategories.identity)})`);
+      if (detectedCategories.urgency.size > 0) reasons.push(`Tekanan waktu terindikasi (${toList(detectedCategories.urgency)})`);
+      if (detectedCategories.pressure.size > 0) reasons.push(`Tekanan sosial/emosional terindikasi (${toList(detectedCategories.pressure)})`);
+      if (detectedCategories.transfer.size > 0) reasons.push(`Permintaan transaksi finansial terindikasi (${toList(detectedCategories.transfer)})`);
+      if (detectedCategories.phishing.size > 0) reasons.push(`Indikator tautan/domain berisiko terdeteksi (${toList(detectedCategories.phishing)})`);
+      if (detectedCategories.malware.size > 0) reasons.push(`Indikasi file/aplikasi berisiko terdeteksi (${toList(detectedCategories.malware)})`);
+      if (detectedCategories.social_engineering.size > 0) reasons.push(`Kombinasi pola social engineering terindikasi (${toList(detectedCategories.social_engineering)})`);
+      if (detectedCategories.financial.size > 0) reasons.push(`Pola transaksi finansial sensitif terindikasi (${toList(detectedCategories.financial)})`);
+      if (detectedCategories.identity.size > 0 && detectedCategories.urgency.size > 0) reasons.push("Permintaan identitas disertai tekanan waktu memiliki pola social engineering");
+      if (detectedCategories.identity.size > 0 && detectedCategories.transfer.size > 0) reasons.push("Kombinasi transaksi + identitas memiliki pola social engineering");
+
+      rawReasons.forEach((reason) => {
+        if (!reasons.includes(reason)) reasons.push(reason);
+      });
+      reasons = [...new Set(reasons)].slice(0, 6);
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
       if (reasons.length === 0) {
@@ -1987,7 +2055,7 @@ if (
       // ─── FINAL DATA ──────────────────────────────────────────────────────────
       const data = {
         status: status,
-        score: score,
+        score: totalRisk,
         confidence: confidence,
         reasons: reasons,
         suggestions: suggestions,
