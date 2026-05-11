@@ -1243,6 +1243,95 @@ const db = window.supabaseClient;
           );
         }
       });
+     // ─── PERSONAL DATA + URGENCY SCAM DETECTION ─────────────────────────
+
+const identityRequestPatterns = [
+  "ktp",
+  "foto ktp",
+  "selfie ktp",
+  "data pribadi",
+  "identitas",
+  "foto identitas",
+  "verifikasi identitas",
+  "jaminan",
+  "buat jaminan"
+];
+
+identityRequestPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    addDanger(
+      pattern,
+      25,
+      `Permintaan data identitas terindikasi: "${pattern}"`
+    );
+  }
+});
+
+// urgency / pressure patterns
+const urgencyPatterns = [
+  "hari ini",
+  "sekarang",
+  "cepet",
+  "cepat ya",
+  "urgent",
+  "buruan",
+  "jangan lama",
+  "butuh cepat",
+  "lagi di luar kota",
+  "minggu ini"
+];
+
+urgencyPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    addDanger(
+      pattern,
+      12,
+      `Tekanan waktu terindikasi: "${pattern}"`
+    );
+  }
+});
+
+// manipulasi transaksi + identitas
+if (
+  (
+    text.includes("ktp") ||
+    text.includes("foto ktp") ||
+    text.includes("jaminan")
+  ) &&
+  (
+    text.includes("transfer") ||
+    text.includes("barang") ||
+    text.includes("kirim")
+  )
+) {
+  score -= 35;
+  dangerCount++;
+
+  reasons.push(
+    "Kombinasi transaksi + permintaan identitas terindikasi berisiko tinggi"
+  );
+}
+
+// kombinasi urgency + identitas
+if (
+  (
+    text.includes("ktp") ||
+    text.includes("identitas") ||
+    text.includes("jaminan")
+  ) &&
+  (
+    text.includes("hari ini") ||
+    text.includes("cepat") ||
+    text.includes("urgent")
+  )
+) {
+  score -= 25;
+  dangerCount++;
+
+  reasons.push(
+    "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering"
+  );
+}
  
       // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
       const excessiveTrustPatterns = [
@@ -1827,7 +1916,7 @@ const db = window.supabaseClient;
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
       if (reasons.length === 0) {
-        reasons.push("Tidak ditemukan indikasi mencurigakan pada teks ini");
+        reasons.push("Belum ditemukan indikasi risiko yang dominan, namun tetap disarankan melakukan verifikasi tambahan.");
         reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola risiko yang menonjol");
       }
  
