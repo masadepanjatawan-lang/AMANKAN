@@ -1023,6 +1023,11 @@ const db = window.supabaseClient;
         dangerCount++;
         if (reason) reasons.push(reason);
       }
+
+      function applyPenalty(points) {
+        totalRisk += points;
+        score -= points;
+      }
  
       const text = input.toLowerCase();
 
@@ -1673,18 +1678,18 @@ if (
  
       // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
       if (dangerCount >= 2) {
-        addRisk(10);
+        applyPenalty(10);
         reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
       }
  
       // ─── MULTI RED FLAG SYSTEM ─────────────────────────
       if (dangerCount >= 4) {
-        addRisk(15);
+        applyPenalty(15);
         reasons.push("Terlalu banyak indikator risiko muncul bersamaan — tingkat kewaspadaan perlu ditingkatkan");
       }
 
       if (dangerCount >= 8) {
-        addRisk(20);
+        applyPenalty(20);
         reasons.push("Banyak indikator dari pola berbeda terindikasi dalam satu pesan");
       }
  
