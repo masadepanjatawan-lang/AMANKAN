@@ -647,7 +647,7 @@
   <!-- Loading -->
   <div class="loading-state" id="loadingState">
     <div class="spinner"></div>
-    <p class="loading-text">AI sedang menganalisa...</p>
+    <p class="loading-text">Sistem sedang memeriksa pola risiko...</p>
     <p class="loading-sub">Biasanya membutuhkan 5–10 detik</p>
   </div>
  
@@ -881,9 +881,9 @@ const db = window.supabaseClient;
         return;
       }
  
-      learnedKeywords = data
-        .filter(d => d.count >= 5)
-        .map(d => d.word);
+      learnedKeywords = (data || [])
+        .filter(d => (d.count || 0) >= 2)
+        .map(d => ({ word: d.word, count: d.count || 0 }));
  
       console.log("Loaded learned keywords:", learnedKeywords);
     } catch (e) {
@@ -941,7 +941,7 @@ const db = window.supabaseClient;
  
     // UI state: loading
     document.getElementById('ctaBtn').disabled = true;
-    document.getElementById('ctaBtn').textContent = 'Menganalisa... 🔍';
+    document.getElementById('ctaBtn').textContent = 'Memeriksa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
  
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
@@ -993,16 +993,35 @@ const db = window.supabaseClient;
       const categoryWeights = { phishing: 18, malware: 30, identity: 10, urgency: 5, pressure: 5, social_engineering: 12, financial: 16, transfer: 8, giveaway: 14, brand_impersonation: 10 };
       const detectedCategories = { identity: new Set(), urgency: new Set(), pressure: new Set(), transfer: new Set(), phishing: new Set(), malware: new Set(), social_engineering: new Set(), financial: new Set(), otp: new Set(), phishing_bank: new Set(), remote_access: new Set(), fake_cs: new Set(), giveaway: new Set(), brand_impersonation: new Set() };
 
+      const categoryCaps = { phishing: 35, urgency: 15, giveaway: 25, social_engineering: 30, malware: 45 };
+      const categoryPenaltyTotals = {};
+      const dedupActivatedPatterns = new Set();
+      const learnedWhitelist = ['resmi', 'komunitas', 'perusahaan', 'tokopedia', 'shopee'];
+      const learnedMinConfidence = 2;
+
+
       function trackCategory(category, keyword) {
         if (detectedCategories[category]) detectedCategories[category].add(keyword);
       }
  
+      function applyCappedPenalty(category, penalty) {
+        if (!category || !categoryCaps[category]) return penalty;
+        const applied = categoryPenaltyTotals[category] || 0;
+        const remaining = Math.max(0, categoryCaps[category] - applied);
+        const effective = Math.min(remaining, penalty);
+        categoryPenaltyTotals[category] = applied + effective;
+        return effective;
+      }
+
       function addDanger(pattern, penalty, reason, options = {}) {
         if (!detectedPatterns.has(pattern)) {
           detectedPatterns.add(pattern);
-          score -= penalty;
-          totalRisk += penalty;
-          dangerCount++;
+          const effectivePenalty = applyCappedPenalty(options.category, penalty);
+          if (effectivePenalty > 0) {
+            score -= effectivePenalty;
+            totalRisk += effectivePenalty;
+            dangerCount++;
+          }
           if (reason) rawReasons.push(reason);
           if (options.category) trackCategory(options.category, options.keyword || pattern);
         }
@@ -1030,6 +1049,11 @@ const db = window.supabaseClient;
       }
  
       const text = input.toLowerCase();
+      const safeContextFlags = {
+        officialCs: /customer service resmi|cs resmi|layanan pelanggan resmi/.test(text),
+        communityTelegram: /join telegram komunitas|komunitas telegram/.test(text),
+        officialTransfer: /rekening perusahaan resmi|rekening resmi perusahaan/.test(text)
+      };
 
       // Pola risiko kumulatif berbasis keyword + score
       const cumulativeRiskPatterns = [
@@ -1044,12 +1068,15 @@ const db = window.supabaseClient;
       });
  
       // FIX #2: learnedKeywords sudah pasti siap di sini karena sudah ditunggu
-      learnedKeywords.forEach(word => {
+      learnedKeywords.forEach(({ word, count }) => {
+        if (count < learnedMinConfidence) return;
+        if (learnedWhitelist.includes(word)) return;
         if (text.includes(word)) {
           addDanger(
             `learned_${word}`,
-            10,
-            `Pola yang perlu diwaspadai terindikasi: "${word}"`
+            6,
+            `Pola pembelajaran yang perlu diwaspadai terindikasi: "${word}"`,
+            { category: 'social_engineering', keyword: word }
           );
         }
       });
@@ -1179,7 +1206,7 @@ const db = window.supabaseClient;
         }
       });
  
-      if (
+      if (!dedupActivatedPatterns.has("fake_cs_otp") &&
         text.includes("otp") &&
         (
           text.includes("kirim") ||
@@ -1284,6 +1311,7 @@ const db = window.supabaseClient;
           "Pihak yang mengatasnamakan layanan pelanggan meminta OTP — perlu kehati-hatian tinggi",
           { category: "fake_cs", keyword: "cs+otp" }
         );
+        dedupActivatedPatterns.add("fake_cs_otp");
       }
  
       // ─── HUMAN MANUAL SCAM DETECTION ─────────────────────────
@@ -1441,6 +1469,19 @@ if (
           );
         }
       });
+
+      if (safeContextFlags.communityTelegram) {
+        applyPenalty(-8);
+        reasons.push("Konteks komunitas Telegram terindikasi normal, sehingga risiko diturunkan.");
+      }
+      if (safeContextFlags.officialCs) {
+        applyPenalty(-10);
+        reasons.push("Penyebutan customer service resmi terindikasi membutuhkan penalti lebih ringan.");
+      }
+      if (safeContextFlags.officialTransfer) {
+        applyPenalty(-10);
+        reasons.push("Transfer ke rekening perusahaan resmi terindikasi perlu verifikasi tambahan, bukan vonis otomatis.");
+      }
  
       // ─── ROMANCE SCAM DETECTION ─────────────────────────
       const romanceScamPatterns = [
@@ -1973,15 +2014,6 @@ if (
       console.log("TOTAL risk score:", totalRisk);
  
       // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
-      let status;
-      if (totalRisk >= 70) {
-        status = "danger";
-      } else if (totalRisk >= 40) {
-        status = "warning";
-      } else {
-        status = "low_risk";
-      }
- 
       // Nilai ini adalah estimasi tingkat kewaspadaan berbasis aturan, bukan kepastian mutlak.
       const severityPriority = {
         critical: ["malware", "otp", "phishing_bank", "remote_access"],
@@ -1992,6 +2024,16 @@ if (
 
       const hasSeverity = (level) => severityPriority[level].some((cat) => detectedCategories[cat] && detectedCategories[cat].size > 0);
       const isCriticalPattern = hasSeverity("critical") || (text.includes("akun akan diblokir") && detectedCategories.identity.size > 0);
+      const multiHighRiskCombo = ['phishing','malware','social_engineering','financial','fake_cs'].filter((c)=>detectedCategories[c] && detectedCategories[c].size>0).length >= 2;
+
+      let status;
+      if ((totalRisk >= 70 && (isCriticalPattern || multiHighRiskCombo)) || isCriticalPattern) {
+        status = "danger";
+      } else if (totalRisk >= 40) {
+        status = "warning";
+      } else {
+        status = "low_risk";
+      }
 
       let confidence;
       if (isCriticalPattern) {
@@ -2066,7 +2108,7 @@ if (
         danger: [
           "Pesan ini memiliki beberapa pola yang sering digunakan dalam penipuan digital. Sebaiknya lakukan verifikasi tambahan sebelum mengambil tindakan.",
           "Konten mengandung banyak indikator risiko, sebaiknya hindari interaksi sampai sumbernya terverifikasi.",
-          "Indikasi risiko cukup tinggi, lebih aman untuk menunda tindakan dan cek ke kanal resmi."
+          "Terindikasi risiko cukup tinggi dan memerlukan verifikasi tambahan ke kanal resmi."
         ]
       };
  
@@ -2264,7 +2306,7 @@ if (
   async function saveLearnedPatterns(input, dangerCount) {
     try {
       const STOPWORDS = new Set([
-        'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk'
+        'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'resmi', 'komunitas', 'perusahaan'
       ]);
  
       const words = [...new Set(
@@ -2278,7 +2320,7 @@ if (
           )
       )];
  
-      if (words.length === 0) return;
+      if (dangerCount < 2 || words.length === 0) return;
  
       const { data: existing, error } = await db
         .from("learned_patterns")
