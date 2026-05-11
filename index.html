@@ -698,6 +698,7 @@
     console.error('Supabase SDK gagal dimuat.');
   } else if (!window.supabaseClient) {
     window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+   var supabase = window.supabaseClient;
   }
  
   // PERBAIKAN: Satu referensi konsisten ke client — dipakai oleh semua fungsi
