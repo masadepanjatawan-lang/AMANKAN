@@ -990,8 +990,8 @@ const db = window.supabaseClient;
       const detectedPatterns = new Set();
       const rawReasons = [];
       const categoryPenaltyApplied = new Set();
-      const categoryWeights = { phishing: 18, malware: 30, identity: 10, urgency: 5, pressure: 5, social_engineering: 12, financial: 16, transfer: 8 };
-      const detectedCategories = { identity: new Set(), urgency: new Set(), pressure: new Set(), transfer: new Set(), phishing: new Set(), malware: new Set(), social_engineering: new Set(), financial: new Set(), otp: new Set(), phishing_bank: new Set(), remote_access: new Set(), fake_cs: new Set() };
+      const categoryWeights = { phishing: 18, malware: 30, identity: 10, urgency: 5, pressure: 5, social_engineering: 12, financial: 16, transfer: 8, giveaway: 14, brand_impersonation: 10 };
+      const detectedCategories = { identity: new Set(), urgency: new Set(), pressure: new Set(), transfer: new Set(), phishing: new Set(), malware: new Set(), social_engineering: new Set(), financial: new Set(), otp: new Set(), phishing_bank: new Set(), remote_access: new Set(), fake_cs: new Set(), giveaway: new Set(), brand_impersonation: new Set() };
 
       function trackCategory(category, keyword) {
         if (detectedCategories[category]) detectedCategories[category].add(keyword);
@@ -1152,6 +1152,32 @@ const db = window.supabaseClient;
           "Penawaran gratis dengan pola manipulatif terindikasi"
         );
       }
+
+      const giveawayPatterns = [
+        "hadiah",
+        "giveaway",
+        "klaim hadiah",
+        "claim hadiah",
+        "terpilih",
+        "sebelum hangus",
+        "iphone gratis",
+        "menang hadiah",
+        "selamat! anda terpilih",
+        "selamat anda terpilih"
+      ];
+
+      giveawayPatterns.forEach(pattern => {
+        if (text.includes(pattern)) {
+          addDanger(`giveaway_${pattern}`, 14, `Pola giveaway/hadiah yang sering dipakai scam terindikasi: "${pattern}"`, { category: "giveaway", keyword: pattern });
+        }
+      });
+
+      const popularBrandPatterns = ["shopee", "tokopedia", "dana"];
+      popularBrandPatterns.forEach(brand => {
+        if (text.includes(brand)) {
+          addDanger(`popular_brand_${brand}`, 8, `Penyebutan brand populer dalam konteks sensitif perlu diwaspadai: "${brand}"`, { category: "brand_impersonation", keyword: brand });
+        }
+      });
  
       if (
         text.includes("otp") &&
@@ -1814,6 +1840,30 @@ if (
         (text.includes("akun") || text.includes("verifikasi") || text.includes("login"))
       ) {
         addRisk(20, "Kombinasi link + verifikasi akun terindikasi — pola phishing yang perlu diwaspadai");
+      }
+
+      const hasGiveawaySignal = ["hadiah", "giveaway", "klaim hadiah", "claim hadiah", "menang hadiah", "iphone gratis", "terpilih"].some(pattern => text.includes(pattern));
+      const hasLinkSignal = ["klik link", "buka link", "http", "bit.ly", "tinyurl"].some(pattern => text.includes(pattern));
+      const hasBrandSignal = ["shopee", "tokopedia", "dana"].some(pattern => text.includes(pattern));
+      const hasVerificationSignal = ["verifikasi", "verifikasi akun", "kode verifikasi", "konfirmasi akun", "login"].some(pattern => text.includes(pattern));
+      const hasUrgencySignal = ["sebelum hangus", "sekarang", "hari ini", "buruan", "urgent", "jangan lama", "klik sekarang"].some(pattern => text.includes(pattern));
+      const hasSensitiveActionSignal = ["otp", "kode otp", "password", "pin", "transfer", "login", "verifikasi akun", "isi data"].some(pattern => text.includes(pattern));
+
+      if (hasGiveawaySignal && hasLinkSignal) {
+        addRisk(22, "Kombinasi hadiah + link terindikasi — pola phishing giveaway yang umum");
+      }
+
+      if (hasBrandSignal && hasVerificationSignal) {
+        addRisk(20, "Kombinasi brand populer + verifikasi terindikasi — perlu validasi kanal resmi");
+        trackCategory("phishing", "brand+verifikasi");
+      }
+
+      if (hasUrgencySignal && hasGiveawaySignal) {
+        addRisk(18, "Kombinasi urgensi + hadiah terindikasi — pola dorongan klaim cepat");
+      }
+
+      if (text.includes("giveaway") && hasSensitiveActionSignal) {
+        addRisk(20, "Giveaway disertai tindakan sensitif terindikasi — berpotensi pengambilalihan akun");
       }
  
       // ─── UNKNOWN LINK DETECTION ─────────────────────────
