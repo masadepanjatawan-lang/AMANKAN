@@ -983,6 +983,7 @@ const db = window.supabaseClient;
     try {
       // ─── SISTEM SKOR BERBASIS BOBOT ──────────────────────────────────────────
       let score = 90;
+      let totalRisk = 0;
       let reasons = [];
       let suggestions = [];
       let dangerCount = 0;
@@ -1000,6 +1001,7 @@ const db = window.supabaseClient;
         if (!detectedPatterns.has(pattern)) {
           detectedPatterns.add(pattern);
           score -= penalty;
+          totalRisk += penalty;
           dangerCount++;
           if (reason) rawReasons.push(reason);
           if (options.category) trackCategory(options.category, options.keyword || pattern);
@@ -1009,12 +1011,32 @@ const db = window.supabaseClient;
       function applyCategoryPenalty(category, penalty) {
         if (detectedCategories[category].size > 0 && !categoryPenaltyApplied.has(category)) {
           score -= penalty;
+          totalRisk += penalty;
           categoryPenaltyApplied.add(category);
           dangerCount++;
         }
       }
+
+      function addRisk(riskScore, reason = "") {
+        totalRisk += riskScore;
+        score -= riskScore;
+        dangerCount++;
+        if (reason) reasons.push(reason);
+      }
  
       const text = input.toLowerCase();
+
+      // Pola risiko kumulatif berbasis keyword + score
+      const cumulativeRiskPatterns = [
+        { keyword: "klik link", score: 20, reason: "Ajakan klik link terindikasi — pola phishing umum" },
+        { keyword: "buka link", score: 18, reason: "Ajakan buka link terindikasi — perlu verifikasi domain" },
+        { keyword: "kode otp", score: 30, reason: "Permintaan OTP terindikasi — red flag keamanan akun" },
+        { keyword: "transfer sekarang", score: 25, reason: "Dorongan transfer cepat terindikasi — pola tekanan finansial" },
+        { keyword: "deposit awal", score: 30, reason: "Permintaan deposit awal terindikasi — pola scam umum" }
+      ];
+      cumulativeRiskPatterns.forEach(({ keyword, score: patternScore, reason }) => {
+        if (text.includes(keyword)) addDanger(`cumulative_${keyword}`, patternScore, reason);
+      });
  
       // FIX #2: learnedKeywords sudah pasti siap di sini karena sudah ditunggu
       learnedKeywords.forEach(word => {
@@ -1311,12 +1333,7 @@ if (
     text.includes("kirim")
   )
 ) {
-  score -= 35;
-  dangerCount++;
-
-  reasons.push(
-    "Kombinasi transaksi + permintaan identitas terindikasi berisiko tinggi"
-  );
+  addRisk(35, "Kombinasi transaksi + permintaan identitas terindikasi berisiko tinggi");
   trackCategory("social_engineering", "transaksi+identitas");
   trackCategory("financial", "transaksi sensitif");
 }
@@ -1334,12 +1351,7 @@ if (
     text.includes("urgent")
   )
 ) {
-  score -= 25;
-  dangerCount++;
-
-  reasons.push(
-    "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering"
-  );
+  addRisk(25, "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering");
   trackCategory("social_engineering", "identitas+urgensi");
 }
  
@@ -1366,13 +1378,9 @@ if (
       });
  
       if (trustCount >= 3) {
-        score -= 18;
-        dangerCount++;
-        reasons.push("Terlalu banyak klaim kepercayaan dalam satu pesan");
+        addRisk(18, "Terlalu banyak klaim kepercayaan dalam satu pesan");
       } else if (trustCount >= 2) {
-        score -= 18;
-        dangerCount++;
-        reasons.push("Terdeteksi kombinasi klaim tidak realistis");
+        addRisk(18, "Terdeteksi kombinasi klaim tidak realistis");
       }
  
       // ─── SOCIAL MEDIA SCAM DETECTION ─────────────────────────
@@ -1487,9 +1495,7 @@ if (
           text.includes("rekening")
         )
       ) {
-        score -= 15;
-        dangerCount++;
-        reasons.push("Dorongan tindakan cepat terindikasi — pola manipulasi umum");
+        addRisk(15, "Dorongan tindakan cepat terindikasi — pola manipulasi umum");
       }
  
       // Domain & link mencurigakan
@@ -1587,18 +1593,14 @@ if (
         text.includes("install aplikasi") ||
         text.includes("unduh aplikasi")
       ) {
-        score -= 30;
-        dangerCount++;
-        reasons.push("Meminta install aplikasi dari sumber tidak jelas");
+        addRisk(30, "Meminta install aplikasi dari sumber tidak jelas");
       }
  
       if (
         text.includes("lihat foto paket") ||
         text.includes("cek paket")
       ) {
-        score -= 20;
-        dangerCount++;
-        reasons.push("Modus paket bermasalah sering digunakan dalam penipuan digital");
+        addRisk(20, "Modus paket bermasalah sering digunakan dalam penipuan digital");
       }
  
 
@@ -1641,9 +1643,7 @@ if (
         (text.includes("paket") || text.includes("resi")) &&
         text.includes("download")
       ) {
-        score -= 30;
-        dangerCount++;
-        reasons.push("Kombinasi paket/resi + download memiliki kemiripan dengan modus malware");
+        addRisk(30, "Kombinasi paket/resi + download memiliki kemiripan dengan modus malware");
       }
  
       // kombinasi invoice + drive
@@ -1651,9 +1651,7 @@ if (
         text.includes("invoice") &&
         (text.includes("drive") || text.includes("mediafire"))
       ) {
-        score -= 25;
-        dangerCount++;
-        reasons.push("Invoice dari link file sharing terindikasi — pola risiko modern");
+        addRisk(25, "Invoice dari link file sharing terindikasi — pola risiko modern");
       }
  
       // Domain terpercaya — bonus poin
@@ -1675,18 +1673,18 @@ if (
  
       // ─── KOMBINASI RISIKO ────────────────────────────────────────────────────
       if (dangerCount >= 2) {
-        score -= 10;
+        addRisk(10);
         reasons.push("Ditemukan kombinasi beberapa indikator bahaya sekaligus — risiko makin tinggi");
       }
  
       // ─── MULTI RED FLAG SYSTEM ─────────────────────────
       if (dangerCount >= 4) {
-        score -= 15;
+        addRisk(15);
         reasons.push("Terlalu banyak indikator risiko muncul bersamaan — tingkat kewaspadaan perlu ditingkatkan");
       }
- 
+
       if (dangerCount >= 8) {
-        score -= 20;
+        addRisk(20);
         reasons.push("Banyak indikator dari pola berbeda terindikasi dalam satu pesan");
       }
  
@@ -1771,9 +1769,7 @@ if (
           text.includes("jamin profit")
         )
       ) {
-        score -= 35;
-        dangerCount++;
-        reasons.push("Investasi dengan klaim tanpa risiko terindikasi — red flag finansial");
+        addRisk(35, "Investasi dengan klaim tanpa risiko terindikasi — red flag finansial");
       }
  
       // KOMBINASI KHUSUS JOB SCAM
@@ -1812,9 +1808,7 @@ if (
         (text.includes("klik link") || text.includes("buka link")) &&
         (text.includes("akun") || text.includes("verifikasi") || text.includes("login"))
       ) {
-        score -= 20;
-        dangerCount++;
-        reasons.push("Kombinasi link + verifikasi akun terindikasi — pola phishing yang perlu diwaspadai");
+        addRisk(20, "Kombinasi link + verifikasi akun terindikasi — pola phishing yang perlu diwaspadai");
       }
  
       // ─── UNKNOWN LINK DETECTION ─────────────────────────
@@ -1834,9 +1828,7 @@ if (
       const suspiciousDomainPattern = /[a-z0-9-]{25,}\.(com|net|xyz|id|site|online)/;
  
       if (suspiciousDomainPattern.test(text)) {
-        score -= 20;
-        dangerCount++;
-        reasons.push("Domain terlalu panjang dan tidak biasa — pola umum phishing modern");
+        addRisk(20, "Domain terlalu panjang dan tidak biasa — pola umum phishing modern");
       }
  
       // ─── SHORT MESSAGE + LINK DETECTION ─────────────────────────
@@ -1923,15 +1915,16 @@ if (
       // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
       score = Math.max(5, Math.min(95, score));
       console.log("TOTAL dangerCount:", dangerCount);
+      console.log("TOTAL risk score:", totalRisk);
  
       // ─── KLASIFIKASI STATUS ──────────────────────────────────────────────────
       let status;
-      if (score >= 85) {
-        status = "low_risk";
-      } else if (score >= 45) {
+      if (totalRisk >= 70) {
+        status = "danger";
+      } else if (totalRisk >= 40) {
         status = "warning";
       } else {
-        status = "danger";
+        status = "low_risk";
       }
  
       // Nilai ini adalah estimasi tingkat kewaspadaan berbasis aturan, bukan kepastian mutlak.
