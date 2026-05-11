@@ -1003,6 +1003,10 @@ const db = window.supabaseClient;
       function trackCategory(category, keyword) {
         if (detectedCategories[category]) detectedCategories[category].add(keyword);
       }
+
+      function sanitizeIndicator(value = "") {
+        return value.replace(/https?:\/\//gi, "").replace(/\bhttps?\b/gi, "").trim();
+      }
  
       function applyCappedPenalty(category, penalty) {
         if (!category || !categoryCaps[category]) return penalty;
@@ -1075,7 +1079,7 @@ const db = window.supabaseClient;
           addDanger(
             `learned_${word}`,
             6,
-            `Pola pembelajaran yang perlu diwaspadai terindikasi: "${word}"`,
+            `Ditemukan pola komunikasi yang pernah muncul pada laporan berisiko: "${sanitizeIndicator(word)}"`,
             { category: 'social_engineering', keyword: word }
           );
         }
@@ -1884,7 +1888,7 @@ if (
       }
 
       const hasGiveawaySignal = ["hadiah", "giveaway", "klaim hadiah", "claim hadiah", "menang hadiah", "iphone gratis", "terpilih"].some(pattern => text.includes(pattern));
-      const hasLinkSignal = ["klik link", "buka link", "http", "bit.ly", "tinyurl"].some(pattern => text.includes(pattern));
+      const hasLinkSignal = ["klik link", "buka link", "bit.ly", "tinyurl", "tautan"].some(pattern => text.includes(pattern));
       const hasBrandSignal = ["shopee", "tokopedia", "dana"].some(pattern => text.includes(pattern));
       const hasVerificationSignal = ["verifikasi", "verifikasi akun", "kode verifikasi", "konfirmasi akun", "login"].some(pattern => text.includes(pattern));
       const hasUrgencySignal = ["sebelum hangus", "sekarang", "hari ini", "buruan", "urgent", "jangan lama", "klik sekarang"].some(pattern => text.includes(pattern));
@@ -1917,7 +1921,7 @@ if (
         )
       ) {
         score -= 10;
-        reasons.push("Link terindikasi namun belum dapat diverifikasi sepenuhnya");
+        reasons.push("Ada tautan eksternal yang sulit diverifikasi, sebaiknya cek sumber resmi terlebih dahulu");
       }
  
       // ─── SUSPICIOUS LONG DOMAIN DETECTION ─────────────────────────
@@ -2046,14 +2050,14 @@ if (
         confidence = Math.min(35, Math.max(10, Math.round(100 - score)));
       }
 
-      const toList = (setObj, limit = 3) => Array.from(setObj).slice(0, limit).join(", ");
+      const toList = (setObj, limit = 3) => Array.from(setObj).map(sanitizeIndicator).filter(Boolean).slice(0, limit).join(", ");
       if (detectedCategories.identity.size > 0) reasons.push(`Permintaan data identitas pribadi terindikasi (${toList(detectedCategories.identity)})`);
       if (detectedCategories.urgency.size > 0) reasons.push(`Tekanan waktu terindikasi (${toList(detectedCategories.urgency)})`);
       if (detectedCategories.pressure.size > 0) reasons.push(`Tekanan sosial/emosional terindikasi (${toList(detectedCategories.pressure)})`);
       if (detectedCategories.transfer.size > 0) reasons.push(`Permintaan transaksi finansial terindikasi (${toList(detectedCategories.transfer)})`);
-      if (detectedCategories.phishing.size > 0) reasons.push(`Indikator tautan/domain berisiko terdeteksi (${toList(detectedCategories.phishing)})`);
+      if (detectedCategories.phishing.size > 0) reasons.push(`Terdapat tautan atau domain yang tidak umum/sulit diverifikasi (${toList(detectedCategories.phishing)})`);
       if (detectedCategories.malware.size > 0) reasons.push(`Indikasi file/aplikasi berisiko terdeteksi (${toList(detectedCategories.malware)})`);
-      if (detectedCategories.social_engineering.size > 0) reasons.push(`Kombinasi pola social engineering terindikasi (${toList(detectedCategories.social_engineering)})`);
+      if (detectedCategories.social_engineering.size > 0) reasons.push(`Terlihat kombinasi pola manipulasi yang mendorong keputusan cepat (${toList(detectedCategories.social_engineering)})`);
       if (detectedCategories.financial.size > 0) reasons.push(`Pola transaksi finansial sensitif terindikasi (${toList(detectedCategories.financial)})`);
       if (detectedCategories.identity.size > 0 && detectedCategories.urgency.size > 0) reasons.push("Permintaan identitas disertai tekanan waktu memiliki pola social engineering");
       if (detectedCategories.identity.size > 0 && detectedCategories.transfer.size > 0) reasons.push("Kombinasi transaksi + identitas memiliki pola social engineering");
@@ -2061,6 +2065,13 @@ if (
       rawReasons.forEach((reason) => {
         if (!reasons.includes(reason)) reasons.push(reason);
       });
+      reasons = [...new Set(reasons)].slice(0, 6);
+
+      if (totalRisk < 30 && status !== "danger") {
+        reasons.unshift("Belum cukup indikator untuk memastikan risiko tinggi.");
+      } else if (totalRisk < 40 && status === "warning") {
+        reasons.unshift("Masih abu-abu, sebaiknya lakukan verifikasi tambahan.");
+      }
       reasons = [...new Set(reasons)].slice(0, 6);
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
