@@ -584,7 +584,7 @@
   <div class="header">
     <div class="badge">🛡️ Anti Scam Checker</div>
     <div class="logo">AMANKAN</div>
-    <p class="tagline">Deteksi potensi penipuan sebelum Anda mengambil keputusan.</p>
+    <p class="tagline">Membantu mendeteksi potensi risiko sebelum Anda mengambil keputusan</p>
   </div>
  
   <!-- Limit Bar -->
@@ -947,7 +947,7 @@ const db = window.supabaseClient;
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
     const loadingMessages = [
       'Menganalisis pola risiko...',
-      'Memeriksa indikator penipuan...',
+      'Memeriksa indikator risiko...',
       'Mencocokkan pola digital...',
       'Hampir selesai...'
     ];
@@ -1004,7 +1004,7 @@ const db = window.supabaseClient;
           addDanger(
             `learned_${word}`,
             10,
-            `Pola scam terdeteksi: "${word}"`
+            `Pola yang perlu diwaspadai terindikasi: "${word}"`
           );
         }
       });
@@ -1017,7 +1017,7 @@ const db = window.supabaseClient;
         addDanger(
           "deposit",
           40,
-          "Meminta deposit awal — ciri khas penipuan kerja online"
+          "Meminta deposit awal — pola yang sering muncul pada tawaran kerja berisiko"
         );
       }
  
@@ -1062,7 +1062,7 @@ const db = window.supabaseClient;
         addDanger(
           "biaya admin",
           30,
-          "Meminta biaya admin — variasi lain dari deposit scam"
+          "Meminta biaya admin — pola ini perlu verifikasi tambahan"
         );
       }
  
@@ -1092,7 +1092,7 @@ const db = window.supabaseClient;
         addDanger(
           "transfer",
           25,
-          "Mengandung instruksi transfer uang — pola umum penipuan finansial"
+          "Mengandung instruksi transfer uang — pola berisiko pada penipuan finansial"
         );
       }
  
@@ -1108,7 +1108,7 @@ const db = window.supabaseClient;
         addDanger(
           "gratis_manipulatif",
           25,
-          "Penawaran gratis dengan pola manipulatif terdeteksi"
+          "Penawaran gratis dengan pola manipulatif terindikasi"
         );
       }
  
@@ -1124,7 +1124,7 @@ const db = window.supabaseClient;
         addDanger(
           "otp_request",
           25,
-          "Permintaan OTP terdeteksi — sangat berisiko jika diminta pihak lain"
+          "Permintaan OTP terindikasi — berpotensi berisiko jika diminta pihak lain"
         );
       }
  
@@ -1139,7 +1139,7 @@ const db = window.supabaseClient;
         addDanger(
           "password_request",
           25,
-          "Permintaan password secara langsung terdeteksi — tindakan berisiko tinggi"
+          "Permintaan password secara langsung terindikasi — tindakan berpotensi berisiko tinggi"
         );
       }
  
@@ -1166,7 +1166,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             18,
-            `Terdeteksi pola manipulasi psikologis: "${pattern}"`
+            `Terindikasi pola manipulasi psikologis: "${pattern}"`
           );
         }
       });
@@ -1186,11 +1186,21 @@ const db = window.supabaseClient;
       ];
  
       fakeCsPatterns.forEach(pattern => {
-        if (text.includes(pattern)) {
+        if (
+          text.includes(pattern) &&
+          (
+            text.includes("otp") ||
+            text.includes("kode verifikasi") ||
+            text.includes("transfer") ||
+            text.includes("rekening") ||
+            text.includes("klik link") ||
+            text.includes("buka link")
+          )
+        ) {
           addDanger(
             pattern,
             15,
-            `Pola customer service palsu terdeteksi: "${pattern}"`
+            `Pola mengatasnamakan layanan pelanggan dengan tindakan sensitif terindikasi: "${pattern}"`
           );
         }
       });
@@ -1203,7 +1213,7 @@ const db = window.supabaseClient;
         addDanger(
           "fake_cs_otp",
           40,
-          "Customer service meminta OTP — sangat berbahaya"
+          "Pihak yang mengatasnamakan layanan pelanggan meminta OTP — perlu kehati-hatian tinggi"
         );
       }
  
@@ -1288,7 +1298,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             18,
-            `Pola scam sosial media terdeteksi: "${pattern}"`
+            `Pola sosial media yang perlu diwaspadai terindikasi: "${pattern}"`
           );
         }
       });
@@ -1311,7 +1321,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             20,
-            `Pola manipulasi emosional terdeteksi: "${pattern}"`
+            `Pola manipulasi emosional terindikasi: "${pattern}"`
           );
         }
       });
@@ -1339,7 +1349,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             18,
-            `Tekanan emosional terdeteksi: "${pattern}"`
+            `Tekanan emosional terindikasi: "${pattern}"`
           );
         }
       });
@@ -1349,7 +1359,7 @@ const db = window.supabaseClient;
         addDanger(
           "klik_sekarang",
           15,
-          "Urgensi 'klik sekarang' terdeteksi — teknik manipulasi psikologis"
+          "Urgensi 'klik sekarang' terindikasi — teknik yang perlu diwaspadai"
         );
       }
  
@@ -1357,7 +1367,7 @@ const db = window.supabaseClient;
         addDanger(
           "buruan",
           15,
-          "Kata 'buruan' menciptakan tekanan waktu — ciri khas scam"
+          "Kata 'buruan' menciptakan tekanan waktu — pola yang perlu diwaspadai"
         );
       }
  
@@ -1379,7 +1389,7 @@ const db = window.supabaseClient;
       ) {
         score -= 15;
         dangerCount++;
-        reasons.push("Dorongan tindakan cepat terdeteksi — pola manipulasi umum");
+        reasons.push("Dorongan tindakan cepat terindikasi — pola manipulasi umum");
       }
  
       // Domain & link mencurigakan
@@ -1455,7 +1465,7 @@ const db = window.supabaseClient;
         addDanger(
           "apk_download",
           45,
-          "File APK dari sumber tidak jelas terdeteksi — berisiko malware"
+          "File APK dari sumber tidak jelas terindikasi — berpotensi berisiko malware"
         );
       }
  
@@ -1468,7 +1478,7 @@ const db = window.supabaseClient;
           addDanger(
             "apk_kurir_scam",
             35,
-            "Kombinasi kurir/paket + file APK sangat mirip modus penipuan malware"
+            "Kombinasi kurir/paket + file APK memiliki kemiripan dengan modus malware"
           );
         }
       }
@@ -1488,7 +1498,7 @@ const db = window.supabaseClient;
       ) {
         score -= 20;
         dangerCount++;
-        reasons.push("Modus paket bermasalah sering digunakan dalam scam digital");
+        reasons.push("Modus paket bermasalah sering digunakan dalam penipuan digital");
       }
  
       // ─── DISGUISED FILE SCAM DETECTION ─────────────────────────
@@ -1525,7 +1535,7 @@ const db = window.supabaseClient;
       ) {
         score -= 30;
         dangerCount++;
-        reasons.push("Kombinasi paket/resi + download sangat mirip modus malware scam");
+        reasons.push("Kombinasi paket/resi + download memiliki kemiripan dengan modus malware");
       }
  
       // kombinasi invoice + drive
@@ -1535,7 +1545,7 @@ const db = window.supabaseClient;
       ) {
         score -= 25;
         dangerCount++;
-        reasons.push("Invoice dari link file sharing terdeteksi — pola scam modern");
+        reasons.push("Invoice dari link file sharing terindikasi — pola risiko modern");
       }
  
       // Domain terpercaya — bonus poin
@@ -1564,12 +1574,12 @@ const db = window.supabaseClient;
       // ─── MULTI RED FLAG SYSTEM ─────────────────────────
       if (dangerCount >= 4) {
         score -= 15;
-        reasons.push("Terlalu banyak indikator scam muncul bersamaan — risiko sangat tinggi");
+        reasons.push("Terlalu banyak indikator risiko muncul bersamaan — tingkat kewaspadaan perlu ditingkatkan");
       }
  
       if (dangerCount >= 8) {
         score -= 20;
-        reasons.push("Pola penipuan terdeteksi secara masif dari banyak indikator berbeda");
+        reasons.push("Banyak indikator dari pola berbeda terindikasi dalam satu pesan");
       }
  
       // ─── INVESTASI SCAM DETECTION ─────────────────────────
@@ -1595,7 +1605,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             25,
-            `Pola investasi mencurigakan terdeteksi: "${pattern}"`
+            `Pola investasi yang perlu diwaspadai terindikasi: "${pattern}"`
           );
         }
       });
@@ -1623,7 +1633,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             18,
-            `Pola pinjaman mencurigakan terdeteksi: "${pattern}"`
+            `Pola pinjaman yang perlu diwaspadai terindikasi: "${pattern}"`
           );
         }
       });
@@ -1655,7 +1665,7 @@ const db = window.supabaseClient;
       ) {
         score -= 35;
         dangerCount++;
-        reasons.push("Investasi dengan klaim tanpa risiko terdeteksi — red flag finansial");
+        reasons.push("Investasi dengan klaim tanpa risiko terindikasi — red flag finansial");
       }
  
       // KOMBINASI KHUSUS JOB SCAM
@@ -1664,7 +1674,7 @@ const db = window.supabaseClient;
         (text.includes("gaji") || text.includes("kerja"))
       ) {
         score -= 30;
-        reasons.push("Kombinasi deposit + iming-iming kerja/gaji — sangat khas penipuan");
+        reasons.push("Kombinasi deposit + iming-iming kerja/gaji terindikasi berisiko tinggi");
       }
  
       // ─── SUSPICIOUS ACTION DETECTION ─────────────────────────
@@ -1684,7 +1694,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             12,
-            `Ajakan tindakan sensitif terdeteksi: "${pattern}"`
+            `Ajakan tindakan sensitif terindikasi: "${pattern}"`
           );
         }
       });
@@ -1696,7 +1706,7 @@ const db = window.supabaseClient;
       ) {
         score -= 20;
         dangerCount++;
-        reasons.push("Kombinasi link + verifikasi akun terdeteksi — pola phishing umum");
+        reasons.push("Kombinasi link + verifikasi akun terindikasi — pola phishing yang perlu diwaspadai");
       }
  
       // ─── UNKNOWN LINK DETECTION ─────────────────────────
@@ -1709,7 +1719,7 @@ const db = window.supabaseClient;
         )
       ) {
         score -= 10;
-        reasons.push("Link terdeteksi namun belum dapat diverifikasi sepenuhnya");
+        reasons.push("Link terindikasi namun belum dapat diverifikasi sepenuhnya");
       }
  
       // ─── SUSPICIOUS LONG DOMAIN DETECTION ─────────────────────────
@@ -1767,7 +1777,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             20,
-            `Janji tidak realistis terdeteksi: "${pattern}"`
+            `Janji tidak realistis terindikasi: "${pattern}"`
           );
         }
       });
@@ -1791,7 +1801,7 @@ const db = window.supabaseClient;
           addDanger(
             pattern,
             15,
-            `Pola testimoni manipulatif terdeteksi: "${pattern}"`
+            `Pola testimoni manipulatif terindikasi: "${pattern}"`
           );
         }
       });
@@ -1811,20 +1821,13 @@ const db = window.supabaseClient;
         status = "danger";
       }
  
-      // FIX #6: Hilangkan nilai acak pada confidence agar hasil konsisten
-      // Sebelumnya: confidence = score + random(-5..+5)
-      // Sekarang: confidence langsung menggunakan score agar reproducible
-      let confidence;
-      if (status === "danger") {
-        confidence = 100 - score;
-      } else {
-        confidence = score;
-      }
+      // Nilai ini adalah estimasi tingkat kewaspadaan berbasis aturan, bukan kepastian mutlak.
+      const confidence = Math.round(100 - score);
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
       if (reasons.length === 0) {
         reasons.push("Tidak ditemukan indikasi mencurigakan pada teks ini");
-        reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola penipuan");
+        reasons.push("Struktur pesan terlihat normal dan tidak mengandung pola risiko yang menonjol");
       }
  
       // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
@@ -1854,9 +1857,9 @@ const db = window.supabaseClient;
       // ─── SUMMARY VARIATIF ────────────────────────────────────────────────────
       const summaryOptions = {
         low_risk: [
-          "Tidak ditemukan indikasi kuat yang mengarah ke penipuan, namun tetap disarankan untuk berhati-hati.",
+          "Tidak ditemukan indikasi kuat yang mengarah ke risiko penipuan, namun tetap disarankan untuk berhati-hati.",
           "Konten terlihat normal tanpa pola mencurigakan, tetapi kewaspadaan tetap diperlukan.",
-          "Tidak ada tanda penipuan yang jelas, namun tetap hindari membagikan data sensitif."
+          "Belum ada tanda risiko yang jelas, namun tetap hindari membagikan data sensitif."
         ],
         warning: [
           "Terdapat beberapa indikasi yang perlu diwaspadai, sebaiknya lakukan verifikasi tambahan.",
@@ -1864,9 +1867,9 @@ const db = window.supabaseClient;
           "Ada beberapa elemen mencurigakan, disarankan untuk tidak terburu-buru mengambil tindakan."
         ],
         danger: [
-          "Terdeteksi banyak pola yang sering muncul pada penipuan digital, sangat disarankan untuk menghindari.",
-          "Konten mengandung banyak indikator berbahaya, jangan melakukan interaksi apapun.",
-          "Risiko penipuan tinggi, sebaiknya abaikan dan jangan klik link yang diberikan."
+          "Pesan ini memiliki beberapa pola yang sering digunakan dalam penipuan digital. Sebaiknya lakukan verifikasi tambahan sebelum mengambil tindakan.",
+          "Konten mengandung banyak indikator risiko, sebaiknya hindari interaksi sampai sumbernya terverifikasi.",
+          "Indikasi risiko cukup tinggi, lebih aman untuk menunda tindakan dan cek ke kanal resmi."
         ]
       };
  
@@ -1884,7 +1887,7 @@ const db = window.supabaseClient;
         danger: [
           "Risikonya tinggi, lebih aman untuk tidak berinteraksi.",
           "Sangat berisiko, jangan berinteraksi sama sekali.",
-          "Jangan percaya, ini kemungkinan besar penipuan."
+          "Lebih aman untuk tidak langsung percaya sebelum verifikasi tambahan."
         ]
       };
  
@@ -1955,7 +1958,7 @@ const db = window.supabaseClient;
     const statusMap = {
       LOW: '🟢 RISIKO RENDAH',
       MEDIUM: '⚠️ PERLU HATI-HATI',
-      HIGH: '🚨 RISIKO TINGGI — HINDARI INTERAKSI'
+      HIGH: '🚨 KEWASPADAAN TINGGI — TUNDA INTERAKSI'
     };
  
     document.getElementById('statusStrip').className = `status-strip ${cssClass}`;
@@ -1970,7 +1973,7 @@ const db = window.supabaseClient;
     fill.style.width = `${data.confidence || 80}%`;
  
     label.className = `confidence-label ${cssClass}`;
-    label.textContent = `Tingkat keyakinan analisis: ${data.confidence || 80}%`;
+    label.textContent = `Estimasi tingkat kewaspadaan: ${data.confidence || 80}%`;
  
     const reasonsList = document.getElementById('reasonsList');
     reasonsList.innerHTML = '';
@@ -2003,25 +2006,25 @@ const db = window.supabaseClient;
     const fallbacks = {
       HIGH: {
         status: 'danger',
-        summary: 'Terdeteksi pola yang sering digunakan dalam penipuan digital.',
+        summary: 'Terindikasi beberapa pola yang sering dipakai dalam penipuan digital.',
         confidence: 78,
-        reasons: ['Mengandung kata kunci penipuan umum', 'Pola mendesak untuk bertindak cepat', 'Tawaran yang tidak realistis'],
+        reasons: ['Mengandung kata kunci risiko umum', 'Pola mendesak untuk bertindak cepat', 'Tawaran yang tidak realistis'],
         suggestions: ['Jangan klik link apapun dalam pesan ini', 'Jangan transfer uang', 'Laporkan ke pihak berwenang jika perlu'],
         singkat: 'terlalu berisiko, lebih baik abaikan saja.'
       },
       MEDIUM: {
         status: 'warning',
         summary: 'Ada beberapa indikasi yang perlu diwaspadai, meskipun belum pasti penipuan.',
-        confidence: 65,
+        confidence: 52,
         reasons: ['Beberapa elemen terlihat tidak lazim', 'Identitas pengirim tidak jelas', 'Perlu verifikasi lebih lanjut'],
         suggestions: ['Verifikasi langsung ke sumber resmi', 'Jangan beri data pribadi', 'Konsultasi dengan orang terpercaya'],
         singkat: 'jangan terburu-buru, cek dulu ke sumber resminya.'
       },
       LOW: {
         status: 'low_risk',
-        summary: 'Tidak ditemukan indikasi penipuan yang jelas dari input ini.',
-        confidence: 82,
-        reasons: ['Tidak ada kata kunci penipuan', 'Struktur terlihat normal', 'Tidak ada urgensi mencurigakan'],
+        summary: 'Belum ditemukan indikasi risiko yang menonjol dari input ini.',
+        confidence: 18,
+        reasons: ['Tidak ada kata kunci risiko', 'Struktur terlihat normal', 'Tidak ada urgensi mencurigakan'],
         suggestions: ["Terlihat berisiko rendah", 'Tetap verifikasi jika ada keraguan', 'Waspada selalu ya'],
         singkat: 'terlihat aman, tapi tetap jaga kewaspadaan.'
       }
