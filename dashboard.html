@@ -54,10 +54,19 @@
 const supabaseUrl = "https://zpxtvgijtpwvintwpkqb.supabase.co";
 const supabaseKey = "sb_publishable_Es00yVC6jt28wCcaKseqjQ_ZBDyT238";
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+  console.error('Supabase SDK gagal dimuat.');
+} else if (!window.supabaseClient) {
+  window.supabaseClient = window.supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+  );
+}
+
+const db = window.supabaseClient;
 
 async function loadData() {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("scans")
     .select("*")
     .order("created_at", { ascending: false });

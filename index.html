@@ -703,7 +703,7 @@
   );
 }
 
-const supabase = window.supabaseClient;
+const db = window.supabaseClient;
 
 
  
@@ -870,7 +870,7 @@ const supabase = window.supabaseClient;
  
   async function loadLearnedPatterns() {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("learned_patterns")
         .select("word, count");
  
@@ -895,7 +895,7 @@ const supabase = window.supabaseClient;
   // ─── MAIN ANALYZE ────────────────────────────────────────────────────────
   async function analyze() {
     // PERBAIKAN: Cek ketersediaan supabase menggunakan variabel yang sudah dideklarasikan
-    if (!supabase) {
+    if (!db) {
       showInlineMessage("⚠️ Database belum siap, coba beberapa detik lagi.");
       return;
     }
@@ -2080,7 +2080,7 @@ const supabase = window.supabaseClient;
  
       if (words.length === 0) return;
  
-      const { data: existing, error } = await supabase
+      const { data: existing, error } = await db
         .from("learned_patterns")
         .select("id, word, count")
         .in("word", words);
@@ -2111,13 +2111,13 @@ const supabase = window.supabaseClient;
       });
  
       if (toUpdate.length > 0) {
-        await supabase
+        await db
           .from("learned_patterns")
           .upsert(toUpdate);
       }
  
       if (toInsert.length > 0) {
-        await supabase
+        await db
           .from("learned_patterns")
           .insert(toInsert);
       }
@@ -2146,7 +2146,7 @@ const supabase = window.supabaseClient;
         created_at: new Date().toISOString()
       };
  
-      const { error } = await supabase
+      const { error } = await db
         .from("scans")
         .insert([payload]);
  
@@ -2172,7 +2172,7 @@ const supabase = window.supabaseClient;
  
       // Upsert: insert jika belum ada, update count jika sudah ada berdasarkan 'date'
       // Catatan: kolom 'date' harus memiliki UNIQUE constraint di Supabase
-      const { error } = await supabase
+      const { error } = await db
         .from('visitors')
         .upsert(
           [{ date: today, count: 1 }],
@@ -2195,7 +2195,7 @@ const supabase = window.supabaseClient;
   // FIX #3: Fallback visitor tracking (metode lama) jika upsert gagal
   async function trackVisitorFallback(today) {
     try {
-      const { data: existing, error: fetchError } = await supabase
+      const { data: existing, error: fetchError } = await db
         .from('visitors')
         .select('id, count')
         .eq('date', today)
@@ -2207,12 +2207,12 @@ const supabase = window.supabaseClient;
       }
  
       if (existing) {
-        await supabase
+        await db
           .from('visitors')
           .update({ count: existing.count + 1 })
           .eq('id', existing.id);
       } else {
-        await supabase
+        await db
           .from('visitors')
           .insert([{ date: today, count: 1 }]);
       }
