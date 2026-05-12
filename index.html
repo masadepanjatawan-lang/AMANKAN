@@ -444,6 +444,9 @@
     .result-section {
       margin-bottom: 20px;
     }
+    .result-section.fade-in {
+      animation: fadeUp 0.35s ease both;
+    }
  
     .result-section-title {
       font-size: 11px;
@@ -471,6 +474,63 @@
     }
  
     .result-points li span.icon { flex-shrink: 0; }
+    .risk-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 12px;
+      color: var(--text);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      animation: badgePop 0.28s ease both;
+    }
+    .risk-badge:hover {
+      transform: translateY(-1px);
+      border-color: rgba(61,255,160,0.28);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .ely-warning-box {
+      background: linear-gradient(135deg, rgba(61,255,160,0.08), rgba(61,255,160,0.03));
+      border: 1px solid rgba(61,255,160,0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+    .feedback-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .feedback-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 10px;
+      font-size: 13px;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .feedback-btn:hover {
+      color: var(--text);
+      border-color: rgba(61,255,160,0.28);
+    }
+    .feedback-btn.selected {
+      color: #072012;
+      background: var(--accent);
+      border-color: transparent;
+    }
  
     .result-singkat {
       background: var(--surface2);
@@ -551,11 +611,15 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
- @keyframes bounceClick {
+@keyframes bounceClick {
   0% { transform: scale(1); }
   40% { transform: scale(0.92); }
   70% { transform: scale(1.04); }
   100% { transform: scale(1); }
+}
+@keyframes badgePop {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
  
 .cta-btn.clicked {
@@ -669,11 +733,35 @@
         <div class="result-section-title">🤔 Kenapa?</div>
         <ul class="result-points" id="reasonsList"></ul>
       </div>
+      <div class="result-section" id="riskBadgesSection" style="display:none;">
+        <div class="result-section-title">🏷️ Kategori Risiko</div>
+        <div class="risk-badges" id="riskBadges"></div>
+      </div>
+      <div class="result-section" id="safeIndicatorsSection" style="display:none;">
+        <div class="result-section-title">✅ Kenapa Ini Terlihat Aman</div>
+        <ul class="result-points" id="safeIndicatorsList"></ul>
+      </div>
+      <div class="result-section" id="elyWarningSection" style="display:none;">
+        <div class="result-section-title">⚡ ELY’S WARNING</div>
+        <div class="ely-warning-box" id="elyWarningText"></div>
+      </div>
       <div class="result-section">
         <div class="result-section-title">💡 Saran</div>
         <ul class="result-points" id="suggestionsList"></ul>
       </div>
       <div class="result-singkat" id="singkat"></div>
+      <div class="result-section fade-in" id="feedbackSection" style="display:none;">
+        <div class="result-section-title">📝 Feedback Analisis</div>
+        <div class="feedback-actions">
+          <button class="feedback-btn" id="feedbackHelpfulBtn" type="button" onclick="submitFeedback('helpful')">👍 Analisis Membantu</button>
+          <button class="feedback-btn" id="feedbackNotAccurateBtn" type="button" onclick="toggleNegativeFeedback()">👎 Kurang Tepat</button>
+        </div>
+        <div class="feedback-actions" id="negativeFeedbackOptions" style="display:none;">
+          <button class="feedback-btn" type="button" onclick="submitFeedback('false_positive')">False Positive</button>
+          <button class="feedback-btn" type="button" onclick="submitFeedback('missed_scam')">Scam Lolos</button>
+          <button class="feedback-btn" type="button" onclick="submitFeedback('analysis_unclear')">Analisis Kurang Jelas</button>
+        </div>
+      </div>
     </div>
     <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
     <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
@@ -717,6 +805,7 @@ const db = window.supabaseClient;
  
   // FIX #2: Flag untuk melacak apakah learnedKeywords sudah siap digunakan
   let patternsLoaded = false;
+  let latestResultContext = null;
  
   function getToday() {
     return new Date().toISOString().split('T')[0];
@@ -2165,10 +2254,14 @@ if (
         status: status,
         score: score,
         confidence: confidence,
+        toneLabel: getConfidenceToneLabel(confidence),
         reasons: reasons,
         suggestions: suggestions,
         summary: summary,
-        singkat: singkat
+        singkat: singkat,
+        riskBadges: getRiskBadges(detectedCategories),
+        safeIndicators: getSafeIndicators(text),
+        elyWarning: generateElyWarning(detectedCategories, text, status)
       };
  
       // FIX #8: Tangani error DB dengan toast ringan, tidak memblokir alur utama
@@ -2223,7 +2316,7 @@ if (
  
     const statusMap = {
       LOW: '🟢 RISIKO RENDAH',
-      MEDIUM: '⚠️ PERLU HATI-HATI',
+      MEDIUM: '⚠️ PERLU PERHATIAN',
       HIGH: '🚨 KEWASPADAAN TINGGI — TUNDA INTERAKSI'
     };
  
@@ -2239,7 +2332,7 @@ if (
     fill.style.width = `${data.confidence || 80}%`;
  
     label.className = `confidence-label ${cssClass}`;
-    label.textContent = `Estimasi tingkat kewaspadaan: ${data.confidence || 80}%`;
+    label.textContent = `${data.toneLabel || getConfidenceToneLabel(data.confidence || 80)} • Estimasi ${data.confidence || 80}%`;
  
     const reasonsList = document.getElementById('reasonsList');
     reasonsList.innerHTML = '';
@@ -2261,11 +2354,130 @@ if (
     const singkat = document.getElementById('singkat');
     singkat.className = `result-singkat ${cssClass}`;
     singkat.textContent = '👉 Singkatnya: ' + (data.singkat || '');
- 
+    renderRiskBadges(data.riskBadges || []);
+    renderSafeIndicators(data.safeIndicators || []);
+    renderElyWarning(data.elyWarning || '');
+    latestResultContext = { input: document.getElementById('inputField').value.trim(), data, mode };
+    resetFeedbackUI();
+    document.getElementById('feedbackSection').style.display = 'block';
+
     document.getElementById('resultCard').style.display = 'block';
     // BUG FIX #5: Ubah block dari 'start' ke 'center' agar tampilan tidak melompat
     // terlalu tinggi pada perangkat mobile — posisi hasil analisa lebih nyaman di tengah layar
     document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function getConfidenceToneLabel(confidence) {
+    if (confidence >= 85) return 'Risiko Sangat Tinggi';
+    if (confidence >= 65) return 'Risiko Tinggi';
+    if (confidence >= 35) return 'Perlu Perhatian';
+    return 'Risiko Rendah';
+  }
+  function getRiskBadges(detectedCategories) {
+    const badgeMap = {
+      phishing: "🎣 Phishing",
+      financial: "💰 Finansial",
+      social_engineering: "🧠 Social Engineering",
+      malware: "📦 Malware",
+      identity: "🪪 Identitas",
+      pressure: "💬 Manipulasi Emosi",
+      urgency: "💬 Manipulasi Emosi",
+      otp: "🔐 OTP / Akun",
+      remote_access: "🖥️ Remote Access",
+      phishing_bank: "🎣 Phishing"
+    };
+    const ordered = ["malware","remote_access","otp","phishing","phishing_bank","financial","social_engineering","identity","pressure","urgency"];
+    const badges = [];
+    ordered.forEach((key) => {
+      if (detectedCategories[key] && detectedCategories[key].size > 0 && badgeMap[key] && !badges.includes(badgeMap[key])) {
+        badges.push(badgeMap[key]);
+      }
+    });
+    return badges.slice(0, 4);
+  }
+  function getSafeIndicators(text) {
+    const indicators = [];
+    if (!text.includes("otp")) indicators.push("Tidak ada permintaan OTP pada konten ini.");
+    if (!text.includes("bit.ly") && !text.includes("tinyurl")) indicators.push("Tidak terdeteksi shortlink yang umum dipakai untuk menyamarkan tujuan tautan.");
+    if (!["sekarang","buruan","urgent","hari ini","jangan lama"].some(k => text.includes(k))) indicators.push("Tidak terlihat tekanan waktu yang kuat.");
+    if (/^https:\/\/(www\.)?(google\.com|tokopedia\.com|shopee\.co\.id)(\/|$)/.test(text)) indicators.push("Domain terlihat mengarah ke layanan resmi yang umum dikenal.");
+    if (!["tolong bantu","jangan bilang siapa siapa","cuma anda yang bisa bantu"].some(k => text.includes(k))) indicators.push("Belum terlihat pola manipulasi emosional yang dominan.");
+    return indicators.slice(0, 4);
+  }
+  function generateElyWarning(detectedCategories, text, status) {
+    const has = (k) => detectedCategories[k] && detectedCategories[k].size > 0;
+    if (has("phishing") || has("phishing_bank")) return "Pola ini mirip dengan modus phishing yang memanfaatkan verifikasi akun dan tautan sulit diverifikasi. Cek kanal resmi sebelum lanjut.";
+    if (has("otp") || has("identity")) return "Ely mendeteksi permintaan data sensitif yang biasanya tidak diminta lewat chat biasa. Verifikasi dulu ke sumber resmi agar keputusan tetap aman.";
+    if (has("social_engineering") || has("urgency") || has("pressure")) return "Pesan ini mendorong tindakan cepat sebelum Anda sempat memverifikasi informasi. Pola seperti ini sering dipakai untuk memengaruhi keputusan.";
+    if (has("remote_access") || has("malware")) return "Ada pola yang berkaitan dengan akses perangkat atau file berisiko. Sebaiknya tahan dulu sebelum membuka file atau memberi izin akses.";
+    if (status === "low_risk" && text.length > 0) return "Sejauh ini sinyal risiko berat belum dominan, tapi tetap cek konteks pengirim dan tujuan akhirnya. Kehati-hatian tetap penting.";
+    return "";
+  }
+  function renderRiskBadges(badges) {
+    const section = document.getElementById('riskBadgesSection');
+    const wrap = document.getElementById('riskBadges');
+    wrap.innerHTML = '';
+    if (!badges.length) { section.style.display = 'none'; return; }
+    badges.forEach((badge) => {
+      const el = document.createElement('span');
+      el.className = 'risk-badge';
+      el.textContent = badge;
+      wrap.appendChild(el);
+    });
+    section.style.display = 'block';
+  }
+  function renderSafeIndicators(indicators) {
+    const section = document.getElementById('safeIndicatorsSection');
+    const list = document.getElementById('safeIndicatorsList');
+    list.innerHTML = '';
+    if (!indicators.length) { section.style.display = 'none'; return; }
+    indicators.forEach((item) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="icon">✅</span> ${item}`;
+      list.appendChild(li);
+    });
+    section.style.display = 'block';
+  }
+  function renderElyWarning(text) {
+    const section = document.getElementById('elyWarningSection');
+    if (!text) { section.style.display = 'none'; return; }
+    document.getElementById('elyWarningText').textContent = text;
+    section.style.display = 'block';
+  }
+  function resetFeedbackUI() {
+    document.getElementById('feedbackHelpfulBtn').classList.remove('selected');
+    document.getElementById('feedbackNotAccurateBtn').classList.remove('selected');
+    document.getElementById('negativeFeedbackOptions').style.display = 'none';
+  }
+  function toggleNegativeFeedback() {
+    const options = document.getElementById('negativeFeedbackOptions');
+    const btn = document.getElementById('feedbackNotAccurateBtn');
+    const show = options.style.display === 'none';
+    options.style.display = show ? 'flex' : 'none';
+    btn.classList.toggle('selected', show);
+  }
+  async function submitFeedback(type) {
+    if (!latestResultContext || !db) return;
+    if (type === 'helpful') {
+      document.getElementById('feedbackHelpfulBtn').classList.add('selected');
+      document.getElementById('feedbackNotAccurateBtn').classList.remove('selected');
+      document.getElementById('negativeFeedbackOptions').style.display = 'none';
+    }
+    try {
+      const payload = {
+        input_text: latestResultContext.input,
+        mode: latestResultContext.mode,
+        result_status: latestResultContext.data.status,
+        confidence: latestResultContext.data.confidence,
+        feedback_type: type,
+        created_at: new Date().toISOString()
+      };
+      const { error } = await db.from("feedback_logs").insert([payload]);
+      if (error) throw error;
+      showDbToast("✅ Feedback tersimpan. Terima kasih.");
+    } catch (e) {
+      console.log("feedback save error:", e);
+      showDbToast("⚠️ Feedback belum tersimpan, silakan coba lagi.");
+    }
   }
  
   function renderFallback(quickRisk) {
