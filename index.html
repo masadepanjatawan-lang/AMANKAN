@@ -389,7 +389,7 @@
       font-size: clamp(22px, 5vw, 30px);
       font-weight: 800;
       line-height: 1.1;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
  
     .result-status.safe { color: var(--accent); }
@@ -467,7 +467,7 @@
     .result-points li {
       font-size: 14px;
       color: var(--text);
-      line-height: 1.4;
+      line-height: 1.55;
       display: flex;
       align-items: flex-start;
       gap: 8px;
@@ -510,7 +510,8 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 10px;
+      margin-top: 8px;
+      opacity: 0.95;
     }
     .feedback-btn {
       background: var(--surface2);
@@ -1983,7 +1984,7 @@ if (
         (text.includes("klik link") || text.includes("buka link")) &&
         (text.includes("akun") || text.includes("verifikasi") || text.includes("login"))
       ) {
-        addRisk(20, "Kombinasi link + verifikasi akun terindikasi — pola phishing yang perlu diwaspadai");
+        addRisk(20, "Pesan meminta verifikasi akun melalui tautan yang sulit diverifikasi.");
       }
 
       const hasGiveawaySignal = ["hadiah", "giveaway", "klaim hadiah", "claim hadiah", "menang hadiah", "iphone gratis", "terpilih"].some(pattern => text.includes(pattern));
@@ -1994,7 +1995,7 @@ if (
       const hasSensitiveActionSignal = ["otp", "kode otp", "password", "pin", "transfer", "login", "verifikasi akun", "isi data"].some(pattern => text.includes(pattern));
 
       if (hasGiveawaySignal && hasLinkSignal) {
-        addRisk(22, "Kombinasi hadiah + link terindikasi — pola phishing giveaway yang umum");
+        addRisk(22, "Pesan menggabungkan iming-iming hadiah dengan tautan, pola yang sering dipakai untuk mengarahkan ke situs tidak resmi.");
       }
 
       if (hasBrandSignal && hasVerificationSignal) {
@@ -2003,7 +2004,7 @@ if (
       }
 
       if (hasUrgencySignal && hasGiveawaySignal) {
-        addRisk(18, "Kombinasi urgensi + hadiah terindikasi — pola dorongan klaim cepat");
+        addRisk(18, "Pesan mencoba mendorong tindakan cepat melalui iming-iming hadiah.");
       }
 
       if (text.includes("giveaway") && hasSensitiveActionSignal) {
@@ -2170,14 +2171,22 @@ if (
       rawReasons.forEach((reason) => {
         if (!reasons.includes(reason)) reasons.push(reason);
       });
-      reasons = [...new Set(reasons)].slice(0, 6);
+      reasons = [...new Set(reasons)];
 
       if (totalRisk < 30 && status !== "danger") {
         reasons.unshift("Belum cukup indikator untuk memastikan risiko tinggi.");
       } else if (totalRisk < 40 && status === "warning") {
         reasons.unshift("Masih abu-abu, sebaiknya lakukan verifikasi tambahan.");
       }
-      reasons = [...new Set(reasons)].slice(0, 6);
+      reasons = [...new Set(reasons)];
+      const MAX_REASON_ITEMS = 5;
+      if (reasons.length > MAX_REASON_ITEMS) {
+        const extraCount = reasons.length - (MAX_REASON_ITEMS - 1);
+        reasons = reasons.slice(0, MAX_REASON_ITEMS - 1);
+        reasons.push(`+${extraCount} indikator lainnya.`);
+      } else {
+        reasons = reasons.slice(0, MAX_REASON_ITEMS);
+      }
  
       // ─── REASONS FALLBACK ────────────────────────────────────────────────────
       if (reasons.length === 0) {
@@ -2254,13 +2263,14 @@ if (
         status: status,
         score: score,
         confidence: confidence,
+        dangerCount: dangerCount,
         toneLabel: getConfidenceToneLabel(confidence),
         reasons: reasons,
         suggestions: suggestions,
         summary: summary,
         singkat: singkat,
         riskBadges: getRiskBadges(detectedCategories),
-        safeIndicators: getSafeIndicators(text),
+        safeIndicators: getSafeIndicators(text, { status, confidence, dangerCount }),
         elyWarning: generateElyWarning(detectedCategories, text, status)
       };
  
@@ -2317,7 +2327,7 @@ if (
     const statusMap = {
       LOW: '🟢 RISIKO RENDAH',
       MEDIUM: '⚠️ PERLU PERHATIAN',
-      HIGH: '🚨 KEWASPADAAN TINGGI — TUNDA INTERAKSI'
+      HIGH: '⚠️ Indikasi Risiko Tinggi'
     };
  
     document.getElementById('statusStrip').className = `status-strip ${cssClass}`;
@@ -2394,21 +2404,38 @@ if (
     });
     return badges.slice(0, 4);
   }
-  function getSafeIndicators(text) {
+  function getSafeIndicators(text, context = {}) {
+    const status = context.status || "warning";
+    const confidence = context.confidence || 0;
+    const dangerCount = context.dangerCount || 0;
+    if (status === "danger" || confidence >= 85 || dangerCount >= 5) return [];
+
     const indicators = [];
-    if (!text.includes("otp")) indicators.push("Tidak ada permintaan OTP pada konten ini.");
-    if (!text.includes("bit.ly") && !text.includes("tinyurl")) indicators.push("Tidak terdeteksi shortlink yang umum dipakai untuk menyamarkan tujuan tautan.");
-    if (!["sekarang","buruan","urgent","hari ini","jangan lama"].some(k => text.includes(k))) indicators.push("Tidak terlihat tekanan waktu yang kuat.");
-    if (/^https:\/\/(www\.)?(google\.com|tokopedia\.com|shopee\.co\.id)(\/|$)/.test(text)) indicators.push("Domain terlihat mengarah ke layanan resmi yang umum dikenal.");
-    if (!["tolong bantu","jangan bilang siapa siapa","cuma anda yang bisa bantu"].some(k => text.includes(k))) indicators.push("Belum terlihat pola manipulasi emosional yang dominan.");
+    const hasOtp = text.includes("otp");
+    const hasShortlink = text.includes("bit.ly") || text.includes("tinyurl");
+    const hasTimePressure = ["sekarang","buruan","urgent","hari ini","jangan lama","klik sekarang"].some(k => text.includes(k));
+    const hasSensitiveAction = ["password","pin","kode verifikasi","login sekarang","verifikasi akun","isi data"].some(k => text.includes(k));
+    const hasFinancialPush = ["transfer","deposit","dana cair","rekening"].some(k => text.includes(k));
+    const hasEmotionalManipulation = ["tolong bantu","jangan bilang siapa siapa","cuma anda yang bisa bantu","akun akan diblokir"].some(k => text.includes(k));
+    const hasOfficialDomain = /^https:\/\/(www\.)?(google\.com|tokopedia\.com|shopee\.co\.id)(\/|$)/.test(text);
+
+    if (hasOfficialDomain) indicators.push("Tautan mengarah ke domain resmi yang umum dikenal.");
+    if (!hasOtp) indicators.push("Tidak ada permintaan OTP pada konten ini.");
+    if (!hasShortlink) indicators.push("Tidak terlihat shortlink yang menyamarkan tujuan tautan.");
+    if (!hasTimePressure) indicators.push("Tidak terlihat tekanan waktu yang mendorong keputusan cepat.");
+    if (!hasSensitiveAction) indicators.push("Tidak ada ajakan tindakan sensitif seperti pengisian data akun.");
+    if (!hasFinancialPush) indicators.push("Tidak ada dorongan transfer atau transaksi finansial langsung.");
+    if (!hasEmotionalManipulation) indicators.push("Belum terlihat dorongan emosional yang menekan keputusan.");
+
+    if (status !== "low_risk" && indicators.length < 2) return [];
     return indicators.slice(0, 4);
   }
   function generateElyWarning(detectedCategories, text, status) {
     const has = (k) => detectedCategories[k] && detectedCategories[k].size > 0;
-    if (has("phishing") || has("phishing_bank")) return "Pola ini mirip dengan modus phishing yang memanfaatkan verifikasi akun dan tautan sulit diverifikasi. Cek kanal resmi sebelum lanjut.";
-    if (has("otp") || has("identity")) return "Ely mendeteksi permintaan data sensitif yang biasanya tidak diminta lewat chat biasa. Verifikasi dulu ke sumber resmi agar keputusan tetap aman.";
-    if (has("social_engineering") || has("urgency") || has("pressure")) return "Pesan ini mendorong tindakan cepat sebelum Anda sempat memverifikasi informasi. Pola seperti ini sering dipakai untuk memengaruhi keputusan.";
-    if (has("remote_access") || has("malware")) return "Ada pola yang berkaitan dengan akses perangkat atau file berisiko. Sebaiknya tahan dulu sebelum membuka file atau memberi izin akses.";
+    if (has("phishing") || has("phishing_bank")) return "Pesan ini memiliki kemiripan dengan modus phishing yang memanfaatkan tautan dan verifikasi akun. Sebaiknya konfirmasi lewat kanal resmi sebelum menindaklanjuti.";
+    if (has("otp") || has("identity")) return "Ely mendeteksi permintaan data sensitif yang biasanya tidak dibutuhkan dalam komunikasi normal. Menahan respons sejenak dapat membantu Anda verifikasi dengan lebih aman.";
+    if (has("social_engineering") || has("urgency") || has("pressure")) return "Ely mendeteksi pola yang mencoba menciptakan rasa mendesak sebelum pengguna sempat memverifikasi informasi. Pola seperti ini sering dipakai untuk memengaruhi keputusan cepat.";
+    if (has("remote_access") || has("malware")) return "Link atau file di pesan ini menunjukkan pola yang umum dipakai untuk akses perangkat tidak resmi. Lebih aman menunda interaksi sampai sumbernya benar-benar terverifikasi.";
     if (status === "low_risk" && text.length > 0) return "Sejauh ini sinyal risiko berat belum dominan, tapi tetap cek konteks pengirim dan tujuan akhirnya. Kehati-hatian tetap penting.";
     return "";
   }
