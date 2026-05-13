@@ -1117,8 +1117,8 @@ const db = window.supabaseClient;
         if (!detectedPatterns.has(pattern)) {
           detectedPatterns.add(pattern);
           const effectivePenalty = applyCappedPenalty(options.category, penalty);
-          if (effectivePenalty > 0) {
-            score -= effectivePenalty;
+         if (effectivePenalty > 0) {
+  score = Math.max(0, score - effectivePenalty);
             totalRisk += effectivePenalty;
             dangerCount++;
           }
@@ -1136,19 +1136,29 @@ const db = window.supabaseClient;
         }
       }
 
-      function addRisk(riskScore, reason = "") {
-        totalRisk += riskScore;
-        score -= riskScore;
-        dangerCount++;
-        if (reason) reasons.push(reason);
-      }
+    function addRisk(riskScore, reason = "") {
+  totalRisk += riskScore;
+
+  score = Math.max(0, score - riskScore);
+
+  dangerCount++;
+
+  if (reason && !reasons.includes(reason)) {
+    reasons.push(reason);
+  }
+}
 
       function applyPenalty(points) {
-        totalRisk += points;
-        score -= points;
-      }
+  totalRisk += points;
+
+  score = Math.max(0, score - points);
+}
  
-      const text = input.toLowerCase();
+  const text = input
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .replace(/[^\w\s:/.-]/g, '')
+  .trim();
       const safeContextFlags = {
         officialCs: /customer service resmi|cs resmi|layanan pelanggan resmi/.test(text),
         communityTelegram: /join telegram komunitas|komunitas telegram/.test(text),
@@ -1303,12 +1313,27 @@ const db = window.supabaseClient;
         }
       });
 
-      const popularBrandPatterns = ["shopee", "tokopedia", "dana"];
-      popularBrandPatterns.forEach(brand => {
-        if (text.includes(brand)) {
-          addDanger(`popular_brand_${brand}`, 8, `Penyebutan brand populer dalam konteks sensitif perlu diwaspadai: "${brand}"`, { category: "brand_impersonation", keyword: brand });
-        }
-      });
+    const popularBrandPatterns = ["shopee", "tokopedia", "dana"];
+
+popularBrandPatterns.forEach(brand => {
+  if (
+    text.includes(brand) &&
+    (
+      text.includes("login") ||
+      text.includes("verifikasi") ||
+      text.includes("otp") ||
+      text.includes("hadiah") ||
+      text.includes("transfer")
+    )
+  ) {
+    addDanger(
+      `popular_brand_${brand}`,
+      8,
+      `Brand populer muncul dalam konteks sensitif: "${brand}"`,
+      { category: "brand_impersonation", keyword: brand }
+    );
+  }
+});
  
       if (!dedupActivatedPatterns.has("fake_cs_otp") &&
         text.includes("otp") &&
