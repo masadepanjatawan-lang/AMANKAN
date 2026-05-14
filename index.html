@@ -2541,6 +2541,7 @@ if (
   }
   async function submitFeedback(type) {
     if (!latestResultContext || !db) return;
+   const { input, data } = latestResultContext;
     if (type === 'helpful') {
       document.getElementById('feedbackHelpfulBtn').classList.add('selected');
       document.getElementById('feedbackNotAccurateBtn').classList.remove('selected');
