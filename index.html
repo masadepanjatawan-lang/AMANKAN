@@ -2548,10 +2548,19 @@ if (
       document.getElementById('negativeFeedbackOptions').style.display = 'none';
     }
     try {
-     const payload = {
-       type: type,
-        created_at: new Date().toISOString()
-      };
+   const payload = {
+  feedback_type: type,
+
+  analysis_result: JSON.stringify({
+    status: data.status,
+    score: data.score,
+    confidence: data.confidence,
+    summary: data.summary,
+    singkat: data.singkat
+  }),
+
+  created_at: new Date().toISOString()
+};
 
 
       const { error } = await db.from("feedback_logs").insert([payload]);
