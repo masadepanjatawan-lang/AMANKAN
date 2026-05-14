@@ -807,9 +807,20 @@ const db = window.supabaseClient;
   // FIX #2: Flag untuk melacak apakah learnedKeywords sudah siap digunakan
   let patternsLoaded = false;
   let latestResultContext = null;
+ function getDeviceId() {
+  let deviceId = localStorage.getItem("elyvo_device_id");
+
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem("elyvo_device_id", deviceId);
+  }
+
+  return deviceId;
+}
  
   function getToday() {
     return new Date().toISOString().split('T')[0];
+   
   }
  
   function getUsage() {
@@ -829,9 +840,30 @@ const db = window.supabaseClient;
     }
   }
  
-  function saveUsage(count) {
-    localStorage.setItem('amankan_usage', JSON.stringify({ date: getToday(), count }));
+async function saveUsage(count) {
+  const deviceId = getDeviceId();
+
+  localStorage.setItem(
+    'amankan_usage',
+    JSON.stringify({
+      date: getToday(),
+      count
+    })
+  );
+
+  try {
+    await db
+      .from("daily_usage")
+      .upsert({
+        device_id: deviceId,
+        usage_count: count,
+        usage_date: getToday()
+      });
+
+  } catch (e) {
+    console.log("usage save failed:", e);
   }
+}
  
   function getRemainingChecks() {
     return MAX_PER_DAY - getUsage().count;
