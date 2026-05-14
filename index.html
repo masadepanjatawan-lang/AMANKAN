@@ -2547,14 +2547,20 @@ if (
       document.getElementById('negativeFeedbackOptions').style.display = 'none';
     }
     try {
-      const payload = {
-        input_text: latestResultContext.input,
-        mode: latestResultContext.mode,
-        result_status: latestResultContext.data.status,
-        confidence: latestResultContext.data.confidence,
-        feedback_type: type,
+     const payload = {
+        input: input,
+        type: type,
+        status: data.status,
+        score: data.score,
+        confidence: data.confidence,
+        summary: data.summary,
+        singkat: data.singkat,
+        reasons: JSON.stringify(data.reasons || []),
+        suggestions: JSON.stringify(data.suggestions || []),
         created_at: new Date().toISOString()
       };
+
+
       const { error } = await db.from("feedback_logs").insert([payload]);
       if (error) throw error;
       showDbToast("✅ Feedback tersimpan. Terima kasih.");
