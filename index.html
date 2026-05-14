@@ -854,7 +854,7 @@ async function saveUsage(count) {
   try {
     await db
       .from("daily_usage")
-      .upsert({
+      .insert({
         device_id: deviceId,
         usage_count: count,
         usage_date: getToday()
