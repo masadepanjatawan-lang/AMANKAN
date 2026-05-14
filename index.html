@@ -2549,15 +2549,7 @@ if (
     }
     try {
      const payload = {
-        input: input,
-        type: type,
-        status: data.status,
-        score: data.score,
-        confidence: data.confidence,
-        summary: data.summary,
-        singkat: data.singkat,
-        reasons: JSON.stringify(data.reasons || []),
-        suggestions: JSON.stringify(data.suggestions || []),
+       type: type,
         created_at: new Date().toISOString()
       };
 
