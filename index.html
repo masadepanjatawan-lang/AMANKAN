@@ -1136,7 +1136,20 @@ async function saveUsage(count) {
       const categoryPenaltyTotals = {};
       const dedupActivatedPatterns = new Set();
       const learnedWhitelist = ['resmi', 'komunitas', 'perusahaan', 'tokopedia', 'shopee'];
-      const learnedMinConfidence = 2;
+     const ignoredLearnedWords = [
+  "halo",
+  "hai",
+  "kak",
+  "bang",
+  "bro",
+  "admin",
+  "iya",
+  "ok",
+  "sip",
+  "thanks",
+  "terima kasih"
+];
+      const learnedMinConfidence = 5;
 
 
       function trackCategory(category, keyword) {
@@ -1230,7 +1243,11 @@ async function saveUsage(count) {
       learnedKeywords.forEach(({ word, count }) => {
         if (count < learnedMinConfidence) return;
         if (learnedWhitelist.includes(word)) return;
-        if (text.includes(word)) {
+       if (ignoredLearnedWords.includes(word)) return;
+        if (
+  word.length >= 5 &&
+  text.includes(word)
+) {
           const learnedReason = buildQuotedReason(
             "Ditemukan pola komunikasi yang pernah muncul pada laporan berisiko",
             word
@@ -2668,7 +2685,11 @@ if (
           )
       )];
  
-      if (dangerCount < 2 || words.length === 0) return;
+    if (
+  dangerCount < 3 ||
+  totalRisk < 35 ||
+  words.length === 0
+) return;
  
       const { data: existing, error } = await db
         .from("learned_patterns")
