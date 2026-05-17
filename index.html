@@ -750,7 +750,34 @@
         <button class="clear-btn" onclick="clearInput()">✕ Hapus</button>
       </div>
     </div>
- 
+ <div class="upload-box" id="uploadBox" style="display:none;">
+
+  <label class="input-label">
+    Upload screenshot yang ingin dicek
+  </label>
+
+  <div class="upload-area">
+    <input type="file" id="screenshotInput" accept="image/*" hidden>
+
+    <button class="cta-btn" type="button"
+      onclick="document.getElementById('screenshotInput').click()">
+
+      📤 Upload File
+
+    </button>
+
+    <p style="
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+    ">
+      PNG, JPG, JPEG
+    </p>
+
+  </div>
+
+</div>
     <!-- CTA -->
     <button class="cta-btn" id="ctaBtn" onclick="handleClick()">
       Tanya Ely 
