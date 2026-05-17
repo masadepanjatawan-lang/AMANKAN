@@ -2802,10 +2802,25 @@ if (
  
       // Upsert: insert jika belum ada, update count jika sudah ada berdasarkan 'date'
       // Catatan: kolom 'date' harus memiliki UNIQUE constraint di Supabase
+     const now = new Date();
+
+const day = now.toLocaleDateString('en-US', {
+  weekday: 'long'
+});
+
+const time = now.toLocaleTimeString('id-ID', {
+  hour: '2-digit',
+  minute: '2-digit'
+});
       const { error } = await db
         .from('visitors')
         .upsert(
-          [{ date: today, count: 1 }],
+       [{
+  date: today,
+  count: 1,
+  day: day,
+  time: time
+}],
           {
             onConflict: 'date',        // trigger update jika date sudah ada
             ignoreDuplicates: false    // tetap jalankan update (bukan ignore)
