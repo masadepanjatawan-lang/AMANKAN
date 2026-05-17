@@ -726,6 +726,9 @@
       <button class="toggle-btn" id="toggleChat" onclick="setMode('chat')">
         💬 Chat / Pesan
       </button>
+     <button class="toggle-btn" id="toggleScreenshot" onclick="setMode('screenshot')">
+  🖼️ Screenshot
+</button>
     </div>
  
     <!-- FIX #9: Inline message box menggantikan alert() yang blocking -->
@@ -981,6 +984,7 @@ async function saveUsage(count) {
     mode = m;
     document.getElementById('toggleLink').classList.toggle('active', m === 'link');
     document.getElementById('toggleChat').classList.toggle('active', m === 'chat');
+   document.getElementById('toggleScreenshot').classList.toggle('active', m === 'screenshot');
     const label = document.getElementById('inputLabel');
     const field = document.getElementById('inputField');
     if (m === 'link') {
