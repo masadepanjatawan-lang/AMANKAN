@@ -304,6 +304,44 @@
     }
  
     .clear-btn:hover { color: var(--text); }
+    .hidden-in-screenshot { display: none !important; }
+
+    .upload-box { display: none; margin-top: 14px; }
+    .upload-area {
+      border: 1px dashed rgba(47,128,255,0.6);
+      background: linear-gradient(180deg, rgba(47,128,255,0.08), rgba(47,128,255,0.03));
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .upload-cloud { font-size: 30px; margin-bottom: 10px; }
+    .upload-title { font-size: 14px; color: var(--text); margin-bottom: 10px; }
+    .upload-btn { width: auto; display: inline-flex; padding: 11px 16px; border-radius: 10px; font-size: 13px; }
+    .upload-info { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .screenshot-preview-list { display: grid; gap: 10px; margin-top: 12px; }
+    .screenshot-card {
+      display: flex; align-items: center; gap: 12px; padding: 10px;
+      border: 1px solid var(--border); border-radius: 12px; background: var(--surface2);
+    }
+    .screenshot-thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); }
+    .screenshot-meta { flex: 1; min-width: 0; }
+    .screenshot-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .screenshot-size { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .remove-shot-btn { border: 1px solid rgba(255,61,90,0.35); color: #ffc4cf; background: rgba(255,61,90,0.12); border-radius: 8px; padding: 6px 9px; cursor: pointer; font-size: 12px; }
+
+    .loading-state.screenshot-mode { position: relative; overflow: hidden; }
+    .loading-state.screenshot-mode .spinner { display: none; }
+    .screenshot-loader { display: none; }
+    .loading-state.screenshot-mode .screenshot-loader { display: block; margin-bottom: 14px; }
+    .waveform { display: flex; gap: 5px; justify-content: center; margin-bottom: 12px; }
+    .waveform span { width: 6px; height: 22px; border-radius: 10px; background: #4DA3FF; animation: wave 1s ease-in-out infinite; box-shadow: 0 0 10px rgba(47,128,255,0.5); }
+    .waveform span:nth-child(2) { animation-delay: 0.1s; } .waveform span:nth-child(3) { animation-delay: 0.2s; } .waveform span:nth-child(4) { animation-delay: 0.3s; } .waveform span:nth-child(5) { animation-delay: 0.4s; }
+    .scan-line { height: 2px; background: linear-gradient(90deg, transparent, #4DA3FF, transparent); animation: scan 1.8s linear infinite; margin: 10px auto; width: 78%; }
+    .loader-glow { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle, rgba(77,163,255,0.4), transparent 65%); animation: glow 2.2s ease-in-out infinite; }
+
+    @keyframes wave { 0%,100% { transform: scaleY(0.55);} 50% { transform: scaleY(1.25);} }
+    @keyframes scan { 0% { transform: translateX(-20%);} 100% { transform: translateX(20%);} }
+    @keyframes glow { 0%,100% { opacity: 0.35; transform: scale(0.9);} 50% { opacity: 0.8; transform: scale(1.05);} }
  
     /* CTA button */
     .cta-btn {
@@ -751,32 +789,15 @@
       </div>
     </div>
  <div class="upload-box" id="uploadBox" style="display:none;">
-
-  <label class="input-label">
-    Upload screenshot yang ingin dicek
-  </label>
-
+  <label class="input-label">Upload screenshot yang ingin dicek</label>
   <div class="upload-area">
-    <input type="file" id="screenshotInput" accept="image/*" hidden>
-
-    <button class="cta-btn" type="button"
-      onclick="document.getElementById('screenshotInput').click()">
-
-      📤 Upload File
-
-    </button>
-
-    <p style="
-      margin-top:12px;
-      color:var(--muted);
-      font-size:13px;
-      text-align:center;
-    ">
-      PNG, JPG, JPEG
-    </p>
-
+    <input type="file" id="screenshotInput" accept="image/*" multiple hidden onchange="handleScreenshotUpload(event)">
+    <div class="upload-cloud">☁️</div>
+    <p class="upload-title">Drag & drop screenshot ke area ini</p>
+    <button class="cta-btn upload-btn" type="button" onclick="document.getElementById('screenshotInput').click()">📁 Pilih File</button>
+    <p class="upload-info">Format: PNG, JPG, JPEG, WEBP • Maksimal 3 foto • Maksimal 5MB/file • Maksimal total 15MB.</p>
   </div>
-
+  <div class="screenshot-preview-list" id="screenshotPreviewList"></div>
 </div>
     <!-- CTA -->
     <button class="cta-btn" id="ctaBtn" onclick="handleClick()">
@@ -787,6 +808,11 @@
   <!-- Loading -->
   <div class="loading-state" id="loadingState">
     <div class="spinner"></div>
+    <div class="screenshot-loader">
+      <div class="waveform"><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="scan-line"></div>
+      <div class="loader-glow"></div>
+    </div>
     <p class="loading-text">Sistem sedang memeriksa pola risiko...</p>
     <p class="loading-sub">Biasanya membutuhkan 5–10 detik</p>
   </div>
@@ -875,6 +901,7 @@ const db = window.supabaseClient;
   // ─── STATE ───────────────────────────────────────────────────────────────
   const MAX_PER_DAY = 5;
   let mode = 'link';
+  let uploadedScreenshots = [];
  
   // FIX #1: Flag untuk mencegah spam click / eksekusi ganda
   let isProcessing = false;
@@ -1014,17 +1041,84 @@ async function saveUsage(count) {
    document.getElementById('toggleScreenshot').classList.toggle('active', m === 'screenshot');
     const label = document.getElementById('inputLabel');
     const field = document.getElementById('inputField');
+    const inputField = document.getElementById('inputField');
+    const charCount = document.getElementById('charCount');
+    const clearBtn = document.querySelector('.clear-btn');
+    const uploadBox = document.getElementById('uploadBox');
+
     if (m === 'link') {
       label.textContent = 'Tempel URL atau link yang ingin dicek';
       field.placeholder = 'https://hadiah-gratis.xyz atau bit.ly/xyz123...';
       field.rows = 4;
-    } else {
+      inputField.classList.remove('hidden-in-screenshot');
+      charCount.classList.remove('hidden-in-screenshot');
+      clearBtn.classList.remove('hidden-in-screenshot');
+      uploadBox.style.display = 'none';
+    } else if (m === 'chat') {
       label.textContent = 'Apa yang ingin kamu cek hari ini?';
       field.placeholder = 'Selamat! Anda memenangkan hadiah Rp 50 juta. Klik link ini sekarang untuk klaim...';
       field.rows = 6;
+      inputField.classList.remove('hidden-in-screenshot');
+      charCount.classList.remove('hidden-in-screenshot');
+      clearBtn.classList.remove('hidden-in-screenshot');
+      uploadBox.style.display = 'none';
+    } else {
+      label.textContent = 'Upload screenshot untuk dianalisis ELYVO';
+      inputField.classList.add('hidden-in-screenshot');
+      charCount.classList.add('hidden-in-screenshot');
+      clearBtn.classList.add('hidden-in-screenshot');
+      uploadBox.style.display = 'block';
+      renderScreenshotPreview();
     }
-    document.getElementById('inputField').value = '';
+    inputField.value = '';
     updateCharCount();
+  }
+
+  function validateScreenshotFiles(files) {
+    const validImages = [];
+    const existingTotal = uploadedScreenshots.reduce((acc, f) => acc + f.size, 0);
+    let rollingTotal = existingTotal;
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) return { valid: false, message: '⚠️ Hanya file gambar yang diperbolehkan.' };
+      if (file.size > 5 * 1024 * 1024) return { valid: false, message: `⚠️ "${file.name}" melebihi 5MB per file.` };
+      if (uploadedScreenshots.length + validImages.length >= 3) return { valid: false, message: '⚠️ Maksimal 3 screenshot per analisis.' };
+      rollingTotal += file.size;
+      if (rollingTotal > 15 * 1024 * 1024) return { valid: false, message: '⚠️ Total ukuran file melebihi 15MB.' };
+      validImages.push(file);
+    }
+    return { valid: true, files: validImages };
+  }
+
+  function handleScreenshotUpload(event) {
+    const selected = Array.from(event.target.files || []);
+    if (!selected.length) return;
+    const validation = validateScreenshotFiles(selected);
+    if (!validation.valid) {
+      showInlineMessage(validation.message);
+      event.target.value = '';
+      return;
+    }
+    uploadedScreenshots = [...uploadedScreenshots, ...validation.files];
+    renderScreenshotPreview();
+    event.target.value = '';
+  }
+
+  function renderScreenshotPreview() {
+    const list = document.getElementById('screenshotPreviewList');
+    list.innerHTML = '';
+    uploadedScreenshots.forEach((file, index) => {
+      const card = document.createElement('div');
+      card.className = 'screenshot-card';
+      card.innerHTML = `<img class="screenshot-thumb" src="${URL.createObjectURL(file)}" alt="${file.name}">
+      <div class="screenshot-meta"><p class="screenshot-name">${file.name}</p><p class="screenshot-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</p></div>
+      <button class="remove-shot-btn" type="button" onclick="removeScreenshot(${index})">Hapus</button>`;
+      list.appendChild(card);
+    });
+  }
+
+  function removeScreenshot(index) {
+    uploadedScreenshots.splice(index, 1);
+    renderScreenshotPreview();
   }
  
   function updateCharCount() {
@@ -1103,29 +1197,36 @@ async function saveUsage(count) {
     if (isProcessing) return;
  
     const input = document.getElementById("inputField").value.trim();
+    const screenshotMode = mode === 'screenshot';
  
     // FIX #9: Gunakan inline message pengganti alert() yang blocking
-    if (!input) {
+    if (!screenshotMode && !input) {
       showInlineMessage('⚠️ Masukkan link atau pesan yang ingin dicek dulu ya!');
       return;
     }
+    if (screenshotMode && uploadedScreenshots.length === 0) {
+      showInlineMessage('⚠️ Upload minimal 1 screenshot sebelum analisis.');
+      return;
+    }
  
-    if (input.length < 5) {
+    if (!screenshotMode && input.length < 5) {
       showInlineMessage('⚠️ Input terlalu pendek. Tempel link atau pesan lengkapnya ya.');
       return;
     }
  
     // FIX #5: Validasi panjang maksimum input agar tidak membebani sistem
     const MAX_INPUT_LENGTH = 2000;
-    if (input.length > MAX_INPUT_LENGTH) {
+    if (!screenshotMode && input.length > MAX_INPUT_LENGTH) {
       showInlineMessage(`⚠️ Input terlalu panjang (maks ${MAX_INPUT_LENGTH} karakter). Mohon persingkat pesannya.`);
       return;
     }
  
     const type = mode;
+    const usageCost = screenshotMode ? Math.max(1, uploadedScreenshots.length) : 1;
  
     const remaining = getRemainingChecks();
-    if (remaining <= 0) {
+    if (remaining < usageCost) {
+      showInlineMessage(`⚠️ Sisa limit tidak cukup. Mode screenshot dengan ${uploadedScreenshots.length} foto butuh ${usageCost} limit.`);
       renderLimitUI();
       return;
     }
@@ -1134,13 +1235,19 @@ async function saveUsage(count) {
     isProcessing = true;
     
     // Sanitize
-    const safeInput = maskPrivateData(input);
-    const quickRisk = quickRiskCheck(input);
+    const screenshotText = uploadedScreenshots.map(f => f.name).join(' | ');
+    const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
+    const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
  
     // UI state: loading
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Memeriksa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
+    document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
+    if (screenshotMode) {
+      document.querySelector('#loadingState .loading-text').textContent = 'ELYVO sedang menganalisis screenshot...';
+      document.querySelector('#loadingState .loading-sub').textContent = 'Mengecek indikasi edit, kata kunci transfer, dan pola manipulasi visual';
+    }
  
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
@@ -1275,7 +1382,7 @@ async function saveUsage(count) {
   score = Math.max(0, score - points);
 }
  
-  const text = input
+  const text = (screenshotMode ? screenshotText : input)
   .toLowerCase()
   .replace(/\s+/g, ' ')
   .replace(/[^\w\s:/.-]/g, '')
@@ -2435,7 +2542,7 @@ if (
  
       // Consume 1 usage
       const usage = getUsage();
-      saveUsage(usage.count + 1);
+      saveUsage(usage.count + usageCost);
  
       renderResult(data);
       renderLimitUI();
@@ -2445,7 +2552,7 @@ if (
       // Fallback result if something fails
       renderFallback(quickRisk);
       const usage = getUsage();
-      saveUsage(usage.count + 1);
+      saveUsage(usage.count + usageCost);
       renderLimitUI();
     } finally {
       // BUG FIX #7: Hentikan rotasi teks loading dan kembalikan ke teks semula
@@ -2455,6 +2562,7 @@ if (
       }
  
       document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('loadingState').classList.remove('screenshot-mode');
       document.getElementById('ctaBtn').disabled = false;
       document.getElementById('ctaBtn').textContent = 'Tanya Ely ✨';
       // FIX #1: Lepas flag processing setelah selesai (berhasil atau gagal)
@@ -2908,3 +3016,12 @@ const time = now.toLocaleTimeString('id-ID', {
 </body>
 </html>
  
+      if (screenshotMode) {
+        const names = uploadedScreenshots.map(f => f.name.toLowerCase());
+        if (names.some(n => /transfer|receipt|bukti|invoice/.test(n))) addRisk(8, "Nama file mengandung konteks transfer/receipt — perlu validasi tambahan");
+        if (names.some(n => /edit|final|rev|fix|copy/.test(n))) addRisk(10, "Nama file terindikasi hasil revisi/edit — perlu cek keaslian screenshot");
+        addRisk(9, "Pemeriksaan placeholder: indikasi manipulasi visual masih membutuhkan verifikasi manual");
+        reasons.push("Placeholder deteksi: fake transfer detection aktif");
+        reasons.push("Placeholder deteksi: fake receipt keywords dipantau");
+        reasons.push("Placeholder deteksi: edited screenshot indicator dipantau");
+      }
