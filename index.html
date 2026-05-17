@@ -3012,11 +3012,7 @@ const time = now.toLocaleTimeString('id-ID', {
     loadLearnedPatterns();
     trackVisitor();
   });
-</script>
-</body>
-</html>
- 
-      if (screenshotMode) {
+   if (screenshotMode) {
         const names = uploadedScreenshots.map(f => f.name.toLowerCase());
         if (names.some(n => /transfer|receipt|bukti|invoice/.test(n))) addRisk(8, "Nama file mengandung konteks transfer/receipt — perlu validasi tambahan");
         if (names.some(n => /edit|final|rev|fix|copy/.test(n))) addRisk(10, "Nama file terindikasi hasil revisi/edit — perlu cek keaslian screenshot");
@@ -3025,3 +3021,8 @@ const time = now.toLocaleTimeString('id-ID', {
         reasons.push("Placeholder deteksi: fake receipt keywords dipantau");
         reasons.push("Placeholder deteksi: edited screenshot indicator dipantau");
       }
+</script>
+</body>
+</html>
+ 
+    
