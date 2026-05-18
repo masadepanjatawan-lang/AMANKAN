@@ -1448,6 +1448,7 @@ if (
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Memeriksa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
+   await new Promise(resolve => requestAnimationFrame(resolve));
     const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
     const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
    const screenshotText = screenshotMode
@@ -1462,7 +1463,14 @@ if (
  
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
-    const loadingMessages = [
+   const loadingMessages = screenshotMode
+  ? [
+      'Ely sedang menganalisis screenshot...',
+      'Membaca teks pada screenshot...',
+      'Mengecek pola manipulasi...',
+      'Hampir selesai...'
+    ]
+  : [
       'Menganalisis pola risiko...',
       'Memeriksa indikator risiko...',
       'Mencocokkan pola digital...',
