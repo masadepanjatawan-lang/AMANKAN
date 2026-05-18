@@ -1440,9 +1440,7 @@ if (
     // Sanitize
     const fileNamesText = uploadedScreenshots.map(f => f.name).join(' | ');
    
-    const screenshotText = screenshotMode
-      ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
-      : '';
+
     const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
     const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
  
@@ -1452,6 +1450,9 @@ if (
     document.getElementById('loadingState').style.display = 'block';
     const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
     const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
+   const screenshotText = screenshotMode
+  ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
+  : '';
     document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
     if (screenshotMode) {
       document.querySelector('#loadingState .loading-text').textContent = 'Ely sedang menganalisis screenshot...';
