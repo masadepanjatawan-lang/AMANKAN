@@ -1439,8 +1439,7 @@ if (
     
     // Sanitize
     const fileNamesText = uploadedScreenshots.map(f => f.name).join(' | ');
-    const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
-    const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
+   
     const screenshotText = screenshotMode
       ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
       : '';
@@ -1451,6 +1450,8 @@ if (
     document.getElementById('ctaBtn').disabled = true;
     document.getElementById('ctaBtn').textContent = 'Memeriksa... 🔍';
     document.getElementById('loadingState').style.display = 'block';
+    const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
+    const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
     document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
     if (screenshotMode) {
       document.querySelector('#loadingState .loading-text').textContent = 'Ely sedang menganalisis screenshot...';
@@ -3165,9 +3166,7 @@ if (
     }, 400);
  
     // Jalankan analyze dengan sedikit delay agar animasi sempat jalan
-    setTimeout(() => {
-      analyze();
-    }, 100);
+  analyze();
   }
  
   // ─── DATABASE FUNCTIONS ───────────────────────────────────────────────────
