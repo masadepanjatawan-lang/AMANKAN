@@ -1072,6 +1072,8 @@ async function saveUsage(count) {
     } else {
     label.style.display = 'none';
       inputField.classList.add('hidden-in-screenshot');
+     inputField.blur();
+     document.querySelector('.input-card').style.display = 'none';
       charCount.classList.add('hidden-in-screenshot');
       clearBtn.classList.add('hidden-in-screenshot');
       uploadBox.style.display = 'block';
