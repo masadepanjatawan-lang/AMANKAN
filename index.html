@@ -773,6 +773,26 @@
     <div class="inline-message" id="inlineMessage"></div>
  
     <!-- Input -->
+   <div class="input-card">
+  <label class="input-label" id="inputLabel">Apa yang ingin kamu cek hari ini?</label>
+
+  <textarea
+    class="input-field"
+    id="inputField"
+    rows="4"
+    maxlength="3000"
+    placeholder="https://contoh-link.com atau tempel isi chat di sini..."
+    oninput="updateCharCount()"
+  ></textarea>
+
+  <div class="input-meta">
+    <span class="char-count" id="charCount">0 / 3000</span>
+
+    <button class="clear-btn" onclick="clearInput()">
+      ✕ Hapus
+    </button>
+  </div>
+</div>
  <div class="upload-box" id="uploadBox" style="display:none;">
   <label class="input-label">Upload screenshot yang ingin dicek</label>
   <div class="upload-area">
