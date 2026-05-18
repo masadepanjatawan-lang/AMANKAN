@@ -1221,10 +1221,29 @@ if (
   indicators.push(`${cfg.tag}:filename_edit_hint`);
   risk += 4;
 }
-    if (merged.includes("sukses") && !merged.includes("ref") && !merged.includes("trx")) {
-      indicators.push(`${cfg.tag}:transaction_format_inconsistency`);
-      risk += 2;
-    }
+   const suspiciousSuccessWords = [
+  "sukses",
+  "berhasil",
+  "success",
+  "successful",
+  "dana masuk",
+  "transfer berhasil"
+];
+
+const missingTransactionProof =
+  !merged.includes("ref") &&
+  !merged.includes("trx") &&
+  !merged.includes("invoice") &&
+  !merged.includes("id transaksi") &&
+  !merged.includes("transaction id");
+
+if (
+  suspiciousSuccessWords.some(word => merged.includes(word)) &&
+  missingTransactionProof
+) {
+  indicators.push(`${cfg.tag}:transaction_format_inconsistency`);
+  risk += 5;
+}
     if (safeNames.some((name) => !/\.(png|jpg|jpeg|webp)$/i.test(name))) {
       indicators.push(`${cfg.tag}:metadata_placeholder`);
       risk += 2;
@@ -1236,10 +1255,15 @@ if (
     if (indicators.includes(`${cfg.tag}:metadata_placeholder`)) {
       reasons.push("Metadata screenshot tidak lengkap atau hilang");
     }
-    if (indicators.length >= 4) {
-      reasons.push("Terdapat indikasi area gambar mengalami recompression");
-      suggestions.push("Perlu verifikasi tambahan melalui sumber resmi atau bukti pembanding.");
-    }
+if (indicators.length >= 3) {
+  reasons.push("Terdapat indikasi screenshot kemungkinan telah diedit, dicrop, atau disimpan ulang berkali-kali");
+  
+  suggestions.push(
+    "Bandingkan screenshot dengan tampilan aplikasi resmi atau minta bukti tambahan yang belum dipotong."
+  );
+
+  risk += 4;
+}
     if (currentScore > 70 && risk > 10) {
       risk = Math.min(risk, 9);
     }
