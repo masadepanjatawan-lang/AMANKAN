@@ -1047,6 +1047,7 @@ async function saveUsage(count) {
     const uploadBox = document.getElementById('uploadBox');
 
     if (m === 'link') {
+     label.style.display = 'block';
       label.textContent = 'Tempel URL atau link yang ingin dicek';
       field.placeholder = 'https://hadiah-gratis.xyz atau bit.ly/xyz123...';
       field.rows = 4;
@@ -1055,6 +1056,7 @@ async function saveUsage(count) {
       clearBtn.classList.remove('hidden-in-screenshot');
       uploadBox.style.display = 'none';
     } else if (m === 'chat') {
+     label.style.display = 'block';
       label.textContent = 'Apa yang ingin kamu cek hari ini?';
       field.placeholder = 'Selamat! Anda memenangkan hadiah Rp 50 juta. Klik link ini sekarang untuk klaim...';
       field.rows = 6;
