@@ -1170,7 +1170,7 @@ async function saveUsage(count) {
   }
 
   const SCREENSHOT_ANALYSIS_ENABLED = true;
-  const MAX_TOTAL_SCREENSHOT_PENALTY = 35;
+  const MAX_TOTAL_SCREENSHOT_PENALTY = 20;
 
   function normalizeScreenshotContext(screenshotText, fileNames) {
     const safeText = typeof screenshotText === 'string' ? screenshotText : '';
@@ -1199,7 +1199,7 @@ async function saveUsage(count) {
       indicators.push(`${cfg.tag}:filename_pattern`);
       risk += 3;
     }
-   const suspiciousEditWords = [
+  const suspiciousEditWords = [
   "edited",
   "edit",
   "mod",
@@ -1209,10 +1209,7 @@ async function saveUsage(count) {
   "temp",
   "preview",
   "compress",
-  "reupload",
-  "ss",
-  "screenshot",
-  "capture"
+  "reupload"
 ];
 
 if (
@@ -1221,13 +1218,11 @@ if (
   indicators.push(`${cfg.tag}:filename_edit_hint`);
   risk += 4;
 }
-   const suspiciousSuccessWords = [
-  "sukses",
-  "berhasil",
-  "success",
-  "successful",
+  const suspiciousSuccessWords = [
+  "transfer berhasil",
   "dana masuk",
-  "transfer berhasil"
+  "payment successful",
+  "transaksi sukses"
 ];
 
 const missingTransactionProof =
@@ -1368,7 +1363,11 @@ if (indicators.length >= 3) {
     if (screenshotMode) {
       document.querySelector('#loadingState .loading-text').textContent = 'ELYVO sedang menganalisis screenshot...';
       document.querySelector('#loadingState .loading-sub').textContent = 'Mengecek indikasi edit, kata kunci transfer, dan pola manipulasi visual';
-    }
+  suggestions.push(
+    "ELYVO saat ini masih mendeteksi pola berbasis nama file, metadata, dan teks sederhana. Sistem belum sepenuhnya memahami isi visual screenshot seperti OCR atau AI vision."
+  );
+}
+    
  
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
@@ -1435,7 +1434,17 @@ if (indicators.length >= 3) {
   "ok",
   "sip",
   "thanks",
-  "terima kasih"
+  "terima kasih",
+   "screenshot",
+  "transfer",
+  "dana",
+  "bank",
+  "rekening",
+  "uang",
+  "payment",
+  "transaksi",
+  "saldo",
+  "bukti"    
 ];
       const learnedMinConfidence = 5;
 
