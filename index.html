@@ -1168,6 +1168,74 @@ async function saveUsage(count) {
     }
     return risk;
   }
+
+  const SCREENSHOT_ANALYSIS_ENABLED = true;
+  const MAX_TOTAL_SCREENSHOT_PENALTY = 35;
+
+  function normalizeScreenshotContext(screenshotText, fileNames) {
+    const safeText = typeof screenshotText === 'string' ? screenshotText : '';
+    const safeNames = Array.isArray(fileNames) ? fileNames : [];
+    const merged = `${safeText} ${safeNames.join(' ')}`.toLowerCase();
+    return { safeText, safeNames, merged };
+  }
+
+  function applyScreenshotPenaltyCap(totalPenalty) {
+    return Math.max(0, Math.min(MAX_TOTAL_SCREENSHOT_PENALTY, totalPenalty || 0));
+  }
+
+  function runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg }) {
+    const { merged, safeNames } = normalizeScreenshotContext(screenshotText, fileNames);
+    const indicators = [];
+    const reasons = [];
+    const suggestions = [];
+    let risk = 0;
+    const hasKeyword = cfg.keywords.some((k) => merged.includes(k));
+    const hasFileSignal = safeNames.some((name) => cfg.fileSignals.some((signal) => name.toLowerCase().includes(signal)));
+    if (hasKeyword) {
+      indicators.push(`${cfg.tag}:keyword_pattern`);
+      risk += 4;
+    }
+    if (hasFileSignal) {
+      indicators.push(`${cfg.tag}:filename_pattern`);
+      risk += 3;
+    }
+    if (merged.includes("edited") || merged.includes("edit") || merged.includes("mod")) {
+      indicators.push(`${cfg.tag}:filename_edit_hint`);
+      risk += 2;
+    }
+    if (merged.includes("sukses") && !merged.includes("ref") && !merged.includes("trx")) {
+      indicators.push(`${cfg.tag}:transaction_format_inconsistency`);
+      risk += 2;
+    }
+    if (safeNames.some((name) => !/\.(png|jpg|jpeg|webp)$/i.test(name))) {
+      indicators.push(`${cfg.tag}:metadata_placeholder`);
+      risk += 2;
+    }
+    if (hasKeyword && (hasFileSignal || indicators.length >= 3)) {
+      reasons.push(cfg.reasonPrimary);
+      suggestions.push(cfg.suggestionPrimary);
+    }
+    if (indicators.includes(`${cfg.tag}:metadata_placeholder`)) {
+      reasons.push("Metadata screenshot tidak lengkap atau hilang");
+    }
+    if (indicators.length >= 4) {
+      reasons.push("Terdapat indikasi area gambar mengalami recompression");
+      suggestions.push("Perlu verifikasi tambahan melalui sumber resmi atau bukti pembanding.");
+    }
+    if (currentScore > 70 && risk > 10) {
+      risk = Math.min(risk, 9);
+    }
+    return { risk: Math.min(cfg.maxPenalty, Math.max(0, risk)), reasons, suggestions, indicators };
+  }
+
+  function analyzeFakeTransfer(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_transfer', maxPenalty: 18, keywords: ['transfer berhasil','transaksi sukses','dana masuk','bukti transfer','brimo','bca mobile','livin','seabank'], fileSignals: ['bca','brimo','livin','seabank','dana','transfer'], reasonPrimary: "Terindikasi struktur tampilan transfer yang tidak konsisten", suggestionPrimary: "Bandingkan bukti transfer dengan aplikasi resmi bank/penerbit sebelum melanjutkan transaksi." } }); }
+  function analyzeFakeQRIS(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_qris', maxPenalty: 15, keywords: ['qris','pembayaran berhasil','payment successful','merchant','scan qr'], fileSignals: ['qris','qr','payment','merchant'], reasonPrimary: "Terdeteksi pola receipt QRIS yang tidak konsisten", suggestionPrimary: "Verifikasi nominal, merchant, dan status pembayaran dari aplikasi resmi." } }); }
+  function analyzeFakeNotif(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_notif', maxPenalty: 14, keywords: ['dana masuk','saldo masuk','transfer masuk','ovo cash','notifikasi bank'], fileSignals: ['notif','notification','sms','ovo','dana'], reasonPrimary: "Terdeteksi pola notifikasi yang berbeda dari struktur UI umum", suggestionPrimary: "Cocokkan notifikasi dengan riwayat transaksi aktual di aplikasi resmi." } }); }
+  function analyzeFakeMutation(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_mutation', maxPenalty: 20, keywords: ['mutasi rekening','history transaksi','saldo akhir','rekening koran'], fileSignals: ['mutasi','history','rekening','saldo'], reasonPrimary: "Terindikasi pola mutasi rekening yang tidak konsisten", suggestionPrimary: "Minta mutasi dari kanal resmi bank untuk verifikasi tambahan." } }); }
+  function analyzeFakeEscrow(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_escrow', maxPenalty: 16, keywords: ['rekber','escrow','admin rekber','saldo ditahan'], fileSignals: ['rekber','escrow','admin','saldo'], reasonPrimary: "Terindikasi pola escrow/rekber dengan struktur halaman tidak lazim", suggestionPrimary: "Validasi domain dan identitas admin rekber dari kanal resmi platform." } }); }
+  function analyzeFakeInvoice(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_invoice', maxPenalty: 16, keywords: ['invoice','purchase order','payment proof','bukti pembayaran'], fileSignals: ['invoice','po','payment','bukti'], reasonPrimary: "Terindikasi pola invoice atau bukti pembayaran yang perlu verifikasi tambahan", suggestionPrimary: "Verifikasi nomor referensi invoice langsung ke pihak penerbit." } }); }
+  function analyzeFakeResi(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_shipping', maxPenalty: 14, keywords: ['paket dikirim','nomor resi','tracking','pengiriman berhasil'], fileSignals: ['resi','tracking','shipment','paket'], reasonPrimary: "Terdeteksi pola tracking/resi yang tidak konsisten", suggestionPrimary: "Cek nomor resi melalui situs resmi ekspedisi terkait." } }); }
+  function analyzeFakeMarketplacePayment(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_marketplace', maxPenalty: 18, keywords: ['pembayaran berhasil','checkout sukses','pesanan dibayar','shopeepay','tokopedia'], fileSignals: ['shopee','tokopedia','checkout','payment'], reasonPrimary: "Terindikasi pola pembayaran marketplace yang perlu verifikasi tambahan", suggestionPrimary: "Validasi status pembayaran dari halaman pesanan resmi marketplace." } }); }
  
   // ─── AUTO LEARNING SYSTEM ─────────────────────────
   let learnedKeywords = [];
@@ -1303,6 +1371,7 @@ async function saveUsage(count) {
       let reasons = [];
       let suggestions = [];
       let dangerCount = 0;
+      const screenshotRiskFindings = [];
       const detectedPatterns = new Set();
       const rawReasons = [];
       const categoryPenaltyApplied = new Set();
@@ -1403,6 +1472,41 @@ async function saveUsage(count) {
         communityTelegram: /join telegram komunitas|komunitas telegram/.test(text),
         officialTransfer: /rekening perusahaan resmi|rekening resmi perusahaan/.test(text)
       };
+
+      if (screenshotMode && SCREENSHOT_ANALYSIS_ENABLED) {
+        try {
+          const helperResults = [
+            { badge: "🖼️ Fake Transfer", result: analyzeFakeTransfer(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake QRIS", result: analyzeFakeQRIS(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Notification", result: analyzeFakeNotif(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Mutation", result: analyzeFakeMutation(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Escrow", result: analyzeFakeEscrow(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Invoice", result: analyzeFakeInvoice(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Shipping", result: analyzeFakeResi(text, uploadedScreenshots.map((f) => f.name), score) },
+            { badge: "🖼️ Fake Marketplace", result: analyzeFakeMarketplacePayment(text, uploadedScreenshots.map((f) => f.name), score) }
+          ];
+          helperResults.forEach(({ badge, result }) => {
+            if (!result) return;
+            screenshotRiskFindings.push({ badge, ...result });
+          });
+
+          const rawScreenshotPenalty = screenshotRiskFindings.reduce((sum, item) => sum + (item.risk || 0), 0);
+          const cappedScreenshotPenalty = applyScreenshotPenaltyCap(rawScreenshotPenalty);
+          if (cappedScreenshotPenalty > 0) {
+            applyPenalty(cappedScreenshotPenalty);
+            dangerCount += 1;
+          }
+
+          screenshotRiskFindings.forEach((finding) => {
+            (finding.reasons || []).forEach((reason) => { if (reason && !reasons.includes(reason)) reasons.push(reason); });
+            (finding.suggestions || []).forEach((tip) => { if (tip && !suggestions.includes(tip)) suggestions.push(tip); });
+          });
+        } catch (screenshotErr) {
+          console.log("screenshot analysis fallback:", screenshotErr);
+          reasons.push("Analisis screenshot mengalami kendala ringan, sistem melanjutkan analisis utama.");
+          suggestions.push("Perlu verifikasi tambahan melalui sumber resmi karena analisis screenshot belum lengkap.");
+        }
+      }
 
       // Pola risiko kumulatif berbasis keyword + score
       const cumulativeRiskPatterns = [
@@ -2442,7 +2546,7 @@ if (
       reasons = [...new Set(reasons)];
 
       if (totalRisk < 30 && status !== "danger") {
-        reasons.unshift("Belum cukup indikator untuk memastikan risiko tinggi.");
+        reasons.unshift(screenshotMode ? "Tidak cukup indikator untuk menyimpulkan manipulasi" : "Belum cukup indikator untuk memastikan risiko tinggi.");
       } else if (totalRisk < 40 && status === "warning") {
         reasons.unshift("Masih abu-abu, sebaiknya lakukan verifikasi tambahan.");
       }
@@ -2485,6 +2589,10 @@ if (
           "Pastikan URL yang dikunjungi menggunakan HTTPS dan domain resmi"
         ];
       }
+      if (screenshotMode) {
+        suggestions.push("ELYVO membantu mendeteksi indikasi manipulasi visual dan pola scam digital. Hasil analisis bukan kepastian forensik.");
+      }
+      suggestions = [...new Set(suggestions)];
  
       // ─── SUMMARY VARIATIF ────────────────────────────────────────────────────
       const summaryOptions = {
@@ -2537,7 +2645,10 @@ if (
         suggestions: suggestions,
         summary: summary,
         singkat: singkat,
-        riskBadges: getRiskBadges(detectedCategories),
+        riskBadges: [...new Set([
+          ...getRiskBadges(detectedCategories),
+          ...screenshotRiskFindings.filter((f) => (f.risk || 0) > 0).map((f) => f.badge)
+        ])].slice(0, 8),
         safeIndicators: getSafeIndicators(text, { status, confidence, dangerCount }),
         elyWarning: generateElyWarning(detectedCategories, text, status)
       };
