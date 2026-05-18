@@ -1294,7 +1294,8 @@ if (
   risk += 6;
 }
 if (
-  suspiciousEditWords.some(word => merged.includes(word))
+  suspiciousEditWords.some(word => merged.includes(word)) &&
+  hasKeyword
 ) {
   indicators.push(`${cfg.tag}:filename_edit_hint`);
   risk += 4;
