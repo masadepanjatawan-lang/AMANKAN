@@ -1041,6 +1041,7 @@ async function saveUsage(count) {
   // ─── MODE TOGGLE ─────────────────────────────────────────────────────────
   function setMode(m) {
     mode = m;
+   const inputCard = document.querySelector('.input-card');
     document.getElementById('toggleLink').classList.toggle('active', m === 'link');
     document.getElementById('toggleChat').classList.toggle('active', m === 'chat');
    document.getElementById('toggleScreenshot').classList.toggle('active', m === 'screenshot');
@@ -1052,6 +1053,7 @@ async function saveUsage(count) {
     const uploadBox = document.getElementById('uploadBox');
 
     if (m === 'link') {
+      inputCard.style.display = 'block';
      label.style.display = 'block';
       label.textContent = 'Tempel URL atau link yang ingin dicek';
       field.placeholder = 'https://hadiah-gratis.xyz atau bit.ly/xyz123...';
@@ -1061,6 +1063,7 @@ async function saveUsage(count) {
       clearBtn.classList.remove('hidden-in-screenshot');
       uploadBox.style.display = 'none';
     } else if (m === 'chat') {
+       inputCard.style.display = 'block';
      label.style.display = 'block';
       label.textContent = 'Apa yang ingin kamu cek hari ini?';
       field.placeholder = 'Selamat! Anda memenangkan hadiah Rp 50 juta. Klik link ini sekarang untuk klaim...';
@@ -1072,7 +1075,7 @@ async function saveUsage(count) {
     } else {
     label.style.display = 'none';
       inputField.classList.add('hidden-in-screenshot');
-     document.querySelector('.input-card').style.display = 'none';
+    inputCard.style.display = 'none';
       charCount.classList.add('hidden-in-screenshot');
       clearBtn.classList.add('hidden-in-screenshot');
       uploadBox.style.display = 'block';
