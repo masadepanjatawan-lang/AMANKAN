@@ -1170,6 +1170,7 @@ async function saveUsage(count) {
   }
 
   const SCREENSHOT_ANALYSIS_ENABLED = true;
+ const HYBRID_SCREENSHOT_DETECTION = true;
   const MAX_TOTAL_SCREENSHOT_PENALTY = 20;
 
   function normalizeScreenshotContext(screenshotText, fileNames) {
@@ -1211,7 +1212,30 @@ async function saveUsage(count) {
   "compress",
   "reupload"
 ];
+const fakeUiIndicators = [
+  "saldo akhir",
+  "transfer berhasil",
+  "payment successful",
+  "rekening tujuan",
+  "nomor referensi",
+  "id transaksi",
+  "waktu transaksi",
+  "bank penerima"
+];
 
+const matchedUiIndicators = fakeUiIndicators.filter(word =>
+  merged.includes(word)
+);
+
+if (
+  matchedUiIndicators.length >= 4 &&
+  !merged.includes("ref") &&
+  !merged.includes("trx")
+) {
+  indicators.push(`${cfg.tag}:fake_ui_structure`);
+
+  risk += 6;
+}
 if (
   suspiciousEditWords.some(word => merged.includes(word))
 ) {
@@ -1251,8 +1275,8 @@ if (
       reasons.push("Metadata screenshot tidak lengkap atau hilang");
     }
 if (indicators.length >= 3) {
+ indicators.push(`${cfg.tag}:hybrid_detection_triggered`);
   reasons.push("Terdapat indikasi screenshot kemungkinan telah diedit, dicrop, atau disimpan ulang berkali-kali");
-  
   suggestions.push(
     "Bandingkan screenshot dengan tampilan aplikasi resmi atau minta bukti tambahan yang belum dipotong."
   );
@@ -1526,7 +1550,11 @@ if (indicators.length >= 3) {
         officialTransfer: /rekening perusahaan resmi|rekening resmi perusahaan/.test(text)
       };
 
-      if (screenshotMode && SCREENSHOT_ANALYSIS_ENABLED) {
+      if (
+  screenshotMode &&
+  SCREENSHOT_ANALYSIS_ENABLED &&
+  HYBRID_SCREENSHOT_DETECTION
+) {
         try {
           const helperResults = [
             { badge: "🖼️ Fake Transfer", result: analyzeFakeTransfer(text, uploadedScreenshots.map((f) => f.name), score) },
