@@ -1441,8 +1441,7 @@ if (
     const fileNamesText = uploadedScreenshots.map(f => f.name).join(' | ');
    
 
-    const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
-    const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
+   
  
     // UI state: loading
     document.getElementById('ctaBtn').disabled = true;
@@ -1454,6 +1453,8 @@ if (
    const screenshotText = screenshotMode
   ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
   : '';
+   const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
+const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
     document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
     if (screenshotMode) {
       document.querySelector('#loadingState .loading-text').textContent = 'Ely sedang menganalisis screenshot...';
