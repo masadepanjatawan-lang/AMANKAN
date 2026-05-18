@@ -1334,7 +1334,10 @@ if (
     if (indicators.includes(`${cfg.tag}:metadata_placeholder`)) {
       reasons.push("Metadata screenshot tidak lengkap atau hilang");
     }
-if (indicators.length >= 3) {
+if (
+  indicators.length >= 3 &&
+  hasKeyword
+) {
  indicators.push(`${cfg.tag}:hybrid_detection_triggered`);
   reasons.push("Terdapat indikasi screenshot kemungkinan telah diedit, dicrop, atau disimpan ulang berkali-kali");
   suggestions.push(
