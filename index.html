@@ -725,6 +725,7 @@
   }
 }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div class="wrapper">
@@ -1173,6 +1174,61 @@ async function saveUsage(count) {
  const HYBRID_SCREENSHOT_DETECTION = true;
   const MAX_TOTAL_SCREENSHOT_PENALTY = 20;
 
+
+  function normalizeTextForAnalysis(text = '') {
+    return String(text || '').toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s:/.-]/g, '').trim();
+  }
+
+  async function preprocessImageForOCR(file) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.max(1.2, Math.min(2, 1800 / Math.max(img.width, 1)));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.filter = 'grayscale(1) contrast(1.35) saturate(0.8)';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none';
+        ctx.globalAlpha = 0.15;
+        ctx.drawImage(canvas, -1, 0);
+        ctx.globalAlpha = 0.1;
+        ctx.drawImage(canvas, 1, 0);
+        ctx.globalAlpha = 1;
+        resolve(canvas);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function extractScreenshotText(files = []) {
+    const fallbackFileText = files.map((f) => f.name).join(' | ');
+    if (!files.length || !window.Tesseract) {
+      return { extractedScreenshotText: fallbackFileText, ocrFailed: true };
+    }
+
+    let worker = null;
+    try {
+      worker = await Tesseract.createWorker('eng');
+      const parts = [];
+      for (const file of files) {
+        const source = await preprocessImageForOCR(file);
+        const result = await worker.recognize(source);
+        const rawText = result?.data?.text || '';
+        if (rawText.trim()) parts.push(rawText.trim());
+      }
+      const extractedScreenshotText = parts.join('\n').trim() || fallbackFileText;
+      return { extractedScreenshotText, ocrFailed: parts.length === 0 };
+    } catch (ocrErr) {
+      console.log('ocr fallback:', ocrErr);
+      return { extractedScreenshotText: fallbackFileText, ocrFailed: true };
+    } finally {
+      if (worker) await worker.terminate();
+    }
+  }
+
   function normalizeScreenshotContext(screenshotText, fileNames) {
     const safeText = typeof screenshotText === 'string' ? screenshotText : '';
     const safeNames = Array.isArray(fileNames) ? fileNames : [];
@@ -1375,7 +1431,12 @@ if (indicators.length >= 3) {
     isProcessing = true;
     
     // Sanitize
-    const screenshotText = uploadedScreenshots.map(f => f.name).join(' | ');
+    const fileNamesText = uploadedScreenshots.map(f => f.name).join(' | ');
+    const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
+    const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
+    const screenshotText = screenshotMode
+      ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
+      : '';
     const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
     const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
  
@@ -1434,7 +1495,7 @@ if (indicators.length >= 3) {
       let suggestions = [];
      if (screenshotMode) {
   suggestions.push(
-    "ELYVO saat ini masih mendeteksi pola berbasis nama file, metadata, dan teks sederhana. Sistem belum sepenuhnya memahami isi visual screenshot seperti OCR atau AI vision."
+    "ELYVO menggunakan deteksi semi otomatis berbasis analisis pola OCR + metadata. Hasil ini adalah indikasi risiko dan mungkin memerlukan verifikasi tambahan, bukan AI vision penuh."
   );
 }
       let dangerCount = 0;
@@ -1539,11 +1600,7 @@ if (indicators.length >= 3) {
   score = Math.max(0, score - points);
 }
  
-  const text = (screenshotMode ? screenshotText : input)
-  .toLowerCase()
-  .replace(/\s+/g, ' ')
-  .replace(/[^\w\s:/.-]/g, '')
-  .trim();
+  const text = normalizeTextForAnalysis(screenshotMode ? screenshotText : input);
       const safeContextFlags = {
         officialCs: /customer service resmi|cs resmi|layanan pelanggan resmi/.test(text),
         communityTelegram: /join telegram komunitas|komunitas telegram/.test(text),
@@ -1587,6 +1644,79 @@ if (indicators.length >= 3) {
           reasons.push("Analisis screenshot mengalami kendala ringan, sistem melanjutkan analisis utama.");
           suggestions.push("Perlu verifikasi tambahan melalui sumber resmi karena analisis screenshot belum lengkap.");
         }
+      }
+
+      function runHybridContextEngine(content) {
+        const contextCombos = [
+          { tag: 'transfer_verifikasi_dana_kembali', words: ['transfer', 'verifikasi', 'dana kembali'], score: 22, reason: 'Terindikasi skenario transfer untuk verifikasi dengan janji dana kembali' },
+          { tag: 'biaya_admin_deposit', words: ['biaya admin', 'deposit'], score: 18, reason: 'Terindikasi kombinasi biaya admin dan deposit awal' },
+          { tag: 'akun_blokir_verifikasi', words: ['akun diblokir', 'verifikasi'], score: 16, reason: 'Terindikasi tekanan akun diblokir untuk mendorong verifikasi' },
+          { tag: 'rekening_tujuan_pembayaran', words: ['rekening tujuan', 'verifikasi pembayaran'], score: 20, reason: 'Terindikasi permintaan pembayaran ke rekening tujuan tertentu' }
+        ];
+        const pressureSignals = ['sekarang juga','cepat ya kak','slot terbatas','akun diblokir','segera transfer','kami tunggu','batas waktu','verifikasi sekarang'];
+        const manipulationSignals = [
+          { key: 'rekening tujuan', score: 10 },
+          { key: 'transfer dulu', score: 20 },
+          { key: '100% aman', score: 15 },
+          { key: 'dana kembali', score: 15 },
+          { key: 'verifikasi pembayaran', score: 25 }
+        ];
+
+        let contextRisk = 0;
+        const findings = [];
+        contextCombos.forEach((combo) => {
+          if (combo.words.every((w) => content.includes(w))) {
+            contextRisk += combo.score;
+            findings.push(combo.reason);
+          }
+        });
+
+        const pressureCount = pressureSignals.filter((s) => content.includes(s)).length;
+        if (pressureCount >= 2) {
+          contextRisk += Math.min(18, pressureCount * 5);
+          findings.push('Terindikasi tekanan waktu/psikologis yang berulang pada percakapan');
+        }
+
+        manipulationSignals.forEach((signal) => {
+          if (content.includes(signal.key)) contextRisk += signal.score;
+        });
+
+        const fakePatternGroups = [
+          ['admin', 'transfer'], ['customer service', 'verifikasi'], ['giveaway', 'transfer'],
+          ['komisi', 'deposit'], ['kerja online', 'deposit'], ['investasi', 'jamin'],
+          ['marketplace', 'verifikasi pembayaran']
+        ];
+        if (fakePatternGroups.some((g) => g.every((w) => content.includes(w)))) {
+          contextRisk += 14;
+          findings.push('Terindikasi pola scam chat berbasis impersonasi/komisi/investasi palsu');
+        }
+
+        const fakeTxStructure = (content.includes('transfer berhasil') || content.includes('payment successful') || content.includes('saldo masuk'))
+          && !content.includes('id transaksi') && !content.includes('transaction id') && !content.includes('nomor referensi');
+        if (fakeTxStructure) {
+          contextRisk += 16;
+          findings.push('Terindikasi struktur transaksi tidak lengkap dan memerlukan verifikasi tambahan');
+        }
+
+        const safeSignals = ['terimakasih', 'pesanan diterima', 'sudah saya cek'];
+        const hasRiskCore = /transfer|otp|rekening|verifikasi|deposit/.test(content);
+        if (!hasRiskCore && pressureCount === 0 && safeSignals.some((s) => content.includes(s))) {
+          contextRisk -= 10;
+          findings.push('Sinyal manipulasi berat tidak dominan pada screenshot ini');
+        }
+
+        return { score: Math.max(0, contextRisk), findings };
+      }
+
+      if (screenshotMode) {
+        const hybridContextResult = runHybridContextEngine(text);
+        if (hybridContextResult.score > 0) {
+          applyPenalty(Math.min(22, hybridContextResult.score));
+          dangerCount += 1;
+        }
+        hybridContextResult.findings.forEach((f) => {
+          if (!reasons.includes(f)) reasons.push(f);
+        });
       }
 
       // Pola risiko kumulatif berbasis keyword + score
