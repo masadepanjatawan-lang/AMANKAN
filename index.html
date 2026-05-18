@@ -1199,10 +1199,28 @@ async function saveUsage(count) {
       indicators.push(`${cfg.tag}:filename_pattern`);
       risk += 3;
     }
-    if (merged.includes("edited") || merged.includes("edit") || merged.includes("mod")) {
-      indicators.push(`${cfg.tag}:filename_edit_hint`);
-      risk += 2;
-    }
+   const suspiciousEditWords = [
+  "edited",
+  "edit",
+  "mod",
+  "fake",
+  "clone",
+  "copy",
+  "temp",
+  "preview",
+  "compress",
+  "reupload",
+  "ss",
+  "screenshot",
+  "capture"
+];
+
+if (
+  suspiciousEditWords.some(word => merged.includes(word))
+) {
+  indicators.push(`${cfg.tag}:filename_edit_hint`);
+  risk += 4;
+}
     if (merged.includes("sukses") && !merged.includes("ref") && !merged.includes("trx")) {
       indicators.push(`${cfg.tag}:transaction_format_inconsistency`);
       risk += 2;
