@@ -1312,7 +1312,9 @@ const missingTransactionProof =
   !merged.includes("trx") &&
   !merged.includes("invoice") &&
   !merged.includes("id transaksi") &&
-  !merged.includes("transaction id");
+  !merged.includes("transaction id") &&
+  !merged.includes("nomor referensi") &&
+  !merged.includes("reference number");
 
 if (
   suspiciousSuccessWords.some(word => merged.includes(word)) &&
