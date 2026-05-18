@@ -1361,11 +1361,8 @@ if (indicators.length >= 3) {
     document.getElementById('loadingState').style.display = 'block';
     document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
     if (screenshotMode) {
-      document.querySelector('#loadingState .loading-text').textContent = 'ELYVO sedang menganalisis screenshot...';
+      document.querySelector('#loadingState .loading-text').textContent = 'Ely sedang menganalisis screenshot...';
       document.querySelector('#loadingState .loading-sub').textContent = 'Mengecek indikasi edit, kata kunci transfer, dan pola manipulasi visual';
-  suggestions.push(
-    "ELYVO saat ini masih mendeteksi pola berbasis nama file, metadata, dan teks sederhana. Sistem belum sepenuhnya memahami isi visual screenshot seperti OCR atau AI vision."
-  );
 }
     
  
@@ -1411,6 +1408,11 @@ if (indicators.length >= 3) {
       let totalRisk = 0;
       let reasons = [];
       let suggestions = [];
+     if (screenshotMode) {
+  suggestions.push(
+    "ELYVO saat ini masih mendeteksi pola berbasis nama file, metadata, dan teks sederhana. Sistem belum sepenuhnya memahami isi visual screenshot seperti OCR atau AI vision."
+  );
+}
       let dangerCount = 0;
       const screenshotRiskFindings = [];
       const detectedPatterns = new Set();
