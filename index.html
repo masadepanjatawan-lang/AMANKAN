@@ -1284,9 +1284,10 @@ const matchedUiIndicators = fakeUiIndicators.filter(word =>
 );
 
 if (
-  matchedUiIndicators.length >= 4 &&
+  matchedUiIndicators.length >= 5 &&
   !merged.includes("ref") &&
-  !merged.includes("trx")
+  !merged.includes("trx") &&
+   !merged.includes("reference")
 ) {
   indicators.push(`${cfg.tag}:fake_ui_structure`);
 
