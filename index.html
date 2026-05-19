@@ -338,6 +338,11 @@
     .waveform span:nth-child(2) { animation-delay: 0.1s; } .waveform span:nth-child(3) { animation-delay: 0.2s; } .waveform span:nth-child(4) { animation-delay: 0.3s; } .waveform span:nth-child(5) { animation-delay: 0.4s; }
     .scan-line { height: 2px; background: linear-gradient(90deg, transparent, #4DA3FF, transparent); animation: scan 1.8s linear infinite; margin: 10px auto; width: 78%; }
     .loader-glow { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle, rgba(77,163,255,0.4), transparent 65%); animation: glow 2.2s ease-in-out infinite; }
+    .loading-progress-wrap { display: none; align-items: center; gap: 10px; max-width: 360px; margin: 14px auto 0; }
+    .loading-state.screenshot-mode .loading-progress-wrap { display: flex; }
+    .loading-progress-track { flex: 1; height: 7px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(77,163,255,0.16); }
+    .loading-progress-fill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4DA3FF, #3DFFA0); box-shadow: 0 0 14px rgba(61,255,160,0.28); transition: width 0.35s ease; }
+    .loading-progress-percent { min-width: 38px; text-align: right; font-size: 12px; color: var(--muted); opacity: 0.85; font-variant-numeric: tabular-nums; }
 
     @keyframes wave { 0%,100% { transform: scaleY(0.55);} 50% { transform: scaleY(1.25);} }
     @keyframes scan { 0% { transform: translateX(-20%);} 100% { transform: translateX(20%);} }
@@ -821,6 +826,10 @@
     </div>
     <p class="loading-text">Sistem sedang memeriksa pola risiko...</p>
     <p class="loading-sub">Biasanya membutuhkan 5–10 detik</p>
+    <div class="loading-progress-wrap" aria-hidden="true">
+      <div class="loading-progress-track"><div class="loading-progress-fill" id="loadingProgressFill"></div></div>
+      <span class="loading-progress-percent" id="loadingProgressPercent">0%</span>
+    </div>
   </div>
  
   <!-- Result -->
@@ -908,6 +917,13 @@ const db = window.supabaseClient;
   const MAX_PER_DAY = 5;
   let mode = 'link';
   let uploadedScreenshots = [];
+  let screenshotPreviewUrls = [];
+  const OCR_TIMEOUT_MS = 12000;
+  const OCR_CACHE_MAX_SIZE = 12;
+  const OCR_MAX_DIMENSION = 1800;
+  const ocrCache = new Map();
+  let ocrQueue = Promise.resolve();
+  let activeOcrRunId = 0;
  
   // FIX #1: Flag untuk mencegah spam click / eksekusi ganda
   let isProcessing = false;
@@ -1117,11 +1133,15 @@ async function saveUsage(count) {
 
   function renderScreenshotPreview() {
     const list = document.getElementById('screenshotPreviewList');
+    screenshotPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    screenshotPreviewUrls = [];
     list.innerHTML = '';
     uploadedScreenshots.forEach((file, index) => {
       const card = document.createElement('div');
+      const previewUrl = URL.createObjectURL(file);
+      screenshotPreviewUrls.push(previewUrl);
       card.className = 'screenshot-card';
-      card.innerHTML = `<img class="screenshot-thumb" src="${URL.createObjectURL(file)}" alt="${file.name}">
+      card.innerHTML = `<img class="screenshot-thumb" src="${previewUrl}" alt="${file.name}">
       <div class="screenshot-meta"><p class="screenshot-name">${file.name}</p><p class="screenshot-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</p></div>
       <button class="remove-shot-btn" type="button" onclick="removeScreenshot(${index})">Hapus</button>`;
       list.appendChild(card);
@@ -1179,54 +1199,219 @@ async function saveUsage(count) {
     return String(text || '').toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s:/.-]/g, '').trim();
   }
 
-  async function preprocessImageForOCR(file) {
+  function yieldToMainThread() {
     return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.max(1.2, Math.min(2, 1800 / Math.max(img.width, 1)));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.filter = 'grayscale(1) contrast(1.35) saturate(0.8)';
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        ctx.filter = 'none';
-        ctx.globalAlpha = 0.15;
-        ctx.drawImage(canvas, -1, 0);
-        ctx.globalAlpha = 0.1;
-        ctx.drawImage(canvas, 1, 0);
-        ctx.globalAlpha = 1;
-        resolve(canvas);
-      };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(resolve, { timeout: 250 });
+      } else {
+        setTimeout(resolve, 0);
+      }
     });
   }
 
-  async function extractScreenshotText(files = []) {
+  function getOcrCacheKey(file) {
+    return [file.name, file.size, file.lastModified].join('|');
+  }
+
+  function rememberOcrCache(key, value) {
+    if (!key) return;
+    if (ocrCache.has(key)) ocrCache.delete(key);
+    ocrCache.set(key, { value, createdAt: Date.now() });
+    while (ocrCache.size > OCR_CACHE_MAX_SIZE) {
+      const oldestKey = ocrCache.keys().next().value;
+      ocrCache.delete(oldestKey);
+    }
+  }
+
+  async function createOcrWorkerWithTimeout(language) {
+    let timedOut = false;
+    const workerPromise = Tesseract.createWorker(language);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        timedOut = true;
+        reject(new Error(`OCR worker load timeout: ${language}`));
+      }, OCR_TIMEOUT_MS);
+    });
+    workerPromise.then((worker) => {
+      if (timedOut) terminateOcrWorker(worker);
+    }).catch(() => null);
+    return Promise.race([workerPromise, timeoutPromise]);
+  }
+
+  async function createOcrWorker() {
+    if (!window.Tesseract) throw new Error('Tesseract tidak tersedia');
+    try {
+      return await createOcrWorkerWithTimeout('eng+ind');
+    } catch (langErr) {
+      console.warn('OCR eng+ind gagal, fallback ke eng:', langErr);
+      return await createOcrWorkerWithTimeout('eng');
+    }
+  }
+
+  async function terminateOcrWorker(worker) {
+    if (!worker) return;
+    try {
+      await worker.terminate();
+    } catch (terminateErr) {
+      console.warn('OCR worker cleanup gagal:', terminateErr);
+    }
+  }
+
+  function withOcrTimeout(task, workerRef) {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(async () => {
+        if (workerRef.current) {
+          await terminateOcrWorker(workerRef.current);
+          workerRef.current = null;
+        }
+        reject(new Error('OCR timeout'));
+      }, OCR_TIMEOUT_MS);
+    });
+    return Promise.race([task, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+  }
+
+  function setLoadingProgress(percent, text, sub) {
+    const loadingStateEl = document.getElementById('loadingState');
+    const fill = document.getElementById('loadingProgressFill');
+    const pct = document.getElementById('loadingProgressPercent');
+    const loadingText = document.querySelector('#loadingState .loading-text');
+    const loadingSub = document.querySelector('#loadingState .loading-sub');
+    const safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    if (loadingStateEl) loadingStateEl.dataset.progress = String(safePercent);
+    if (fill) fill.style.width = `${safePercent}%`;
+    if (pct) pct.textContent = `${safePercent}%`;
+    if (text && loadingText) loadingText.textContent = text;
+    if (sub && loadingSub) loadingSub.textContent = sub;
+  }
+
+  async function preprocessImageForOCR(file) {
+    let objectUrl = '';
+    try {
+      await yieldToMainThread();
+      return await new Promise((resolve) => {
+        const img = new Image();
+        let settled = false;
+        const cleanup = () => {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+        const finish = (value) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(value || file);
+        };
+        img.onload = async () => {
+          try {
+            await yieldToMainThread();
+            const largestSide = Math.max(img.width, img.height, 1);
+            const resizeScale = Math.min(1, OCR_MAX_DIMENSION / largestSide);
+            const ocrScale = Math.max(1, Math.min(1.35, 1500 / Math.max(img.width, 1)));
+            const scale = Math.min(1.35, resizeScale * ocrScale);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return finish(file);
+            ctx.filter = 'grayscale(1) contrast(1.35) saturate(0.8)';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.filter = 'none';
+            ctx.globalAlpha = 0.12;
+            ctx.drawImage(canvas, -1, 0);
+            ctx.globalAlpha = 0.08;
+            ctx.drawImage(canvas, 1, 0);
+            ctx.globalAlpha = 1;
+            if (canvas.toBlob) {
+              canvas.toBlob((blob) => finish(blob || canvas), 'image/jpeg', 0.86);
+            } else {
+              finish(canvas);
+            }
+          } catch (preprocessErr) {
+            console.warn('Preprocess OCR gagal, gunakan file asli:', preprocessErr);
+            finish(file);
+          }
+        };
+        img.onerror = () => {
+          console.warn('Gambar gagal dimuat untuk OCR, gunakan metadata file:', file?.name);
+          finish(file);
+        };
+        objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+      });
+    } catch (err) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      console.warn('Preprocess OCR fallback:', err);
+      return file;
+    }
+  }
+
+  async function runSequentialOcr(files = [], progressCallback = null) {
     const fallbackFileText = files.map((f) => f.name).join(' | ');
     if (!files.length || !window.Tesseract) {
+      console.warn('OCR tidak tersedia, fallback ke metadata screenshot.');
       return { extractedScreenshotText: fallbackFileText, ocrFailed: true };
     }
 
-    let worker = null;
+    const parts = [];
+    const workerRef = { current: null };
     try {
-      worker = await Tesseract.createWorker('eng');
-      const parts = [];
-      for (const file of files) {
+      workerRef.current = await createOcrWorker();
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        const cacheKey = getOcrCacheKey(file);
+        const cached = ocrCache.get(cacheKey);
+        if (cached) {
+          if (cached.value) parts.push(cached.value);
+          progressCallback?.('cache', index, files.length);
+          continue;
+        }
+
+        await yieldToMainThread();
+        progressCallback?.('preprocess', index, files.length);
         const source = await preprocessImageForOCR(file);
-        const result = await worker.recognize(source);
-        const rawText = result?.data?.text || '';
-        if (rawText.trim()) parts.push(rawText.trim());
+        await yieldToMainThread();
+        progressCallback?.('ocr', index, files.length);
+
+        try {
+          if (!workerRef.current) workerRef.current = await createOcrWorker();
+          const result = await withOcrTimeout(workerRef.current.recognize(source), workerRef);
+          const rawText = (result?.data?.text || '').trim();
+          rememberOcrCache(cacheKey, rawText);
+          if (rawText) parts.push(rawText);
+        } catch (fileOcrErr) {
+          console.warn('OCR gagal untuk satu screenshot, lanjut fallback metadata:', fileOcrErr);
+          rememberOcrCache(cacheKey, '');
+          if (!workerRef.current && index < files.length - 1) {
+            try {
+              workerRef.current = await createOcrWorker();
+            } catch (recreateErr) {
+              console.warn('OCR worker gagal dibuat ulang:', recreateErr);
+              break;
+            }
+          }
+        }
       }
       const extractedScreenshotText = parts.join('\n').trim() || fallbackFileText;
       return { extractedScreenshotText, ocrFailed: parts.length === 0 };
     } catch (ocrErr) {
-      console.log('ocr fallback:', ocrErr);
+      console.warn('OCR fallback:', ocrErr);
       return { extractedScreenshotText: fallbackFileText, ocrFailed: true };
     } finally {
-      if (worker) await worker.terminate();
+      await terminateOcrWorker(workerRef.current);
+      workerRef.current = null;
     }
+  }
+
+  async function extractScreenshotText(files = [], progressCallback = null) {
+    const runId = ++activeOcrRunId;
+    const safeFiles = Array.from(files || []);
+    ocrQueue = ocrQueue.catch(() => null).then(async () => {
+      if (runId !== activeOcrRunId) {
+        return { extractedScreenshotText: safeFiles.map((f) => f.name).join(' | '), ocrFailed: true };
+      }
+      return runSequentialOcr(safeFiles, progressCallback);
+    });
+    return ocrQueue;
   }
 
   function normalizeScreenshotContext(screenshotText, fileNames) {
@@ -1444,32 +1629,24 @@ if (
    
  
     // UI state: loading
-    document.getElementById('ctaBtn').disabled = true;
-    document.getElementById('ctaBtn').textContent = 'Memeriksa... 🔍';
-    document.getElementById('loadingState').style.display = 'block';
+    const loadingStateEl = document.getElementById('loadingState');
+    const ctaBtn = document.getElementById('ctaBtn');
+    ctaBtn.disabled = true;
+    ctaBtn.textContent = 'Memeriksa... 🔍';
+    loadingStateEl.classList.toggle('screenshot-mode', screenshotMode);
+    loadingStateEl.style.display = 'block';
+    setLoadingProgress(screenshotMode ? 8 : 0, screenshotMode ? 'Upload screenshot diterima...' : 'Sistem sedang memeriksa pola risiko...', screenshotMode ? `${uploadedScreenshots.length} screenshot siap dianalisis` : 'Biasanya membutuhkan 5–10 detik');
    await new Promise(resolve => requestAnimationFrame(resolve));
-    const ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots) : { extractedScreenshotText: '' , ocrFailed: false };
-    const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
-   const screenshotText = screenshotMode
-  ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
-  : '';
-   const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
-const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
-    document.getElementById('loadingState').classList.toggle('screenshot-mode', screenshotMode);
-    if (screenshotMode) {
-      document.querySelector('#loadingState .loading-text').textContent = 'Ely sedang menganalisis screenshot...';
-      document.querySelector('#loadingState .loading-sub').textContent = 'Mengecek indikasi edit, kata kunci transfer, dan pola manipulasi visual';
-}
-    
- 
+
     // BUG FIX #7: Rotasi teks loading secara dinamis agar terasa lebih responsif
     // pada koneksi lambat — tanpa mengubah struktur HTML loading state
    const loadingMessages = screenshotMode
   ? [
-      'Ely sedang menganalisis screenshot...',
+      'Upload screenshot diterima...',
+      'Memproses gambar untuk OCR...',
       'Membaca teks pada screenshot...',
-      'Mengecek pola manipulasi...',
-      'Hampir selesai...'
+      'Menjalankan hybrid screenshot detection...',
+      'Finalisasi hasil...'
     ]
   : [
       'Menganalisis pola risiko...',
@@ -1480,9 +1657,43 @@ const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
     let loadingMsgIndex = 0;
     const loadingTextEl = document.querySelector('#loadingState .loading-text');
     const loadingInterval = setInterval(() => {
+      if (screenshotMode) return;
       loadingMsgIndex = (loadingMsgIndex + 1) % loadingMessages.length;
       if (loadingTextEl) loadingTextEl.textContent = loadingMessages[loadingMsgIndex];
     }, 2500);
+
+    const ocrProgress = (stage, index, total) => {
+      const perFile = total ? (index / total) : 0;
+      if (stage === 'cache') {
+        setLoadingProgress(58 + Math.round(((index + 1) / Math.max(total, 1)) * 8), 'Menggunakan cache OCR screenshot...', 'Screenshot sama terdeteksi, OCR tidak diulang');
+      } else if (stage === 'preprocess') {
+        setLoadingProgress(18 + Math.round(perFile * 22), 'Preprocess image...', `Mengoptimalkan screenshot ${index + 1}/${total} agar browser tetap responsif`);
+      } else if (stage === 'ocr') {
+        setLoadingProgress(42 + Math.round(perFile * 24), 'OCR reading...', `Membaca teks screenshot ${index + 1}/${total}`);
+      }
+    };
+
+    let ocrContext = { extractedScreenshotText: '' , ocrFailed: false };
+    try {
+      ocrContext = screenshotMode ? await extractScreenshotText(uploadedScreenshots, ocrProgress) : ocrContext;
+    } catch (ocrUnexpectedErr) {
+      console.warn('OCR tidak dapat diselesaikan, fallback ke metadata file:', ocrUnexpectedErr);
+      ocrContext = { extractedScreenshotText: fileNamesText, ocrFailed: true };
+    }
+    if (screenshotMode && ocrContext.ocrFailed) {
+      console.warn('OCR tidak membaca teks signifikan, analisis lanjut dengan metadata dan hybrid screenshot detection.');
+      showInlineMessage('OCR tidak dapat membaca seluruh isi screenshot. Analisis menggunakan pola visual dan metadata.', 4500);
+    }
+    const extractedScreenshotText = ocrContext.extractedScreenshotText || fileNamesText;
+   const screenshotText = screenshotMode
+  ? `${normalizeTextForAnalysis(extractedScreenshotText)} | filename metadata: ${normalizeTextForAnalysis(fileNamesText)}`
+  : '';
+   const safeInput = maskPrivateData(screenshotMode ? screenshotText : input);
+const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
+    if (screenshotMode) {
+      setLoadingProgress(70, 'Hybrid screenshot detection...', 'Mengecek indikasi edit, kata kunci transfer, dan pola manipulasi visual');
+}
+    await yieldToMainThread();
  
     // FIX #10: Sembunyikan hasil lama sebelum proses baru dimulai
     const resultCard = document.getElementById('resultCard');
@@ -1630,6 +1841,8 @@ const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
   SCREENSHOT_ANALYSIS_ENABLED &&
   HYBRID_SCREENSHOT_DETECTION
 ) {
+        setLoadingProgress(76, 'Hybrid screenshot detection...', 'Menjalankan helper screenshot analyzer existing');
+        await yieldToMainThread();
         try {
           const helperResults = [
             { badge: "🖼️ Fake Transfer", result: analyzeFakeTransfer(text, uploadedScreenshots.map((f) => f.name), score) },
@@ -2882,6 +3095,11 @@ if (
         elyWarning: generateElyWarning(detectedCategories, text, status)
       };
  
+      if (screenshotMode) {
+        setLoadingProgress(92, 'Finalisasi hasil...', 'Menyusun kartu hasil dan rekomendasi');
+        await yieldToMainThread();
+      }
+
       // FIX #8: Tangani error DB dengan toast ringan, tidak memblokir alur utama
       try {
         await saveToDatabase(safeInput, type, data);
@@ -2895,12 +3113,14 @@ if (
       const usage = getUsage();
       saveUsage(usage.count + usageCost);
  
+      if (screenshotMode) setLoadingProgress(100, 'Finalisasi hasil...', 'Hasil siap ditampilkan');
       renderResult(data);
       renderLimitUI();
  
     } catch (err) {
       console.error(err);
       // Fallback result if something fails
+      if (screenshotMode) setLoadingProgress(100, 'Finalisasi hasil fallback...', 'Analisis tetap ditampilkan dengan data yang tersedia');
       renderFallback(quickRisk);
       const usage = getUsage();
       saveUsage(usage.count + usageCost);
@@ -2912,6 +3132,7 @@ if (
         loadingTextEl.textContent = 'Menganalisis pola risiko...';
       }
  
+      setLoadingProgress(0, 'Menganalisis pola risiko...', 'Biasanya membutuhkan 5–10 detik');
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('loadingState').classList.remove('screenshot-mode');
       document.getElementById('ctaBtn').disabled = false;
