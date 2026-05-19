@@ -1313,7 +1313,9 @@ async function saveUsage(count) {
             canvas.height = Math.max(1, Math.round(img.height * scale));
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) return finish(file);
-            ctx.filter = 'grayscale(1) contrast(1.35) saturate(0.8)';
+            const qualityScore = Math.min(1, Math.max(0.2, (Math.min(img.width, img.height, 1400) / 1400)));
+            const needsHeavyPreprocess = qualityScore < 0.55 || file.size > (2.5 * 1024 * 1024);
+            ctx.filter = needsHeavyPreprocess ? 'grayscale(1) contrast(1.38) saturate(0.78)' : 'grayscale(0.65) contrast(1.12) saturate(0.92)';
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             ctx.filter = 'none';
             ctx.globalAlpha = 0.12;
@@ -1425,116 +1427,113 @@ async function saveUsage(count) {
     return Math.max(0, Math.min(MAX_TOTAL_SCREENSHOT_PENALTY, totalPenalty || 0));
   }
 
+  function levenshteinDistance(a = '', b = '') {
+    const m = a.length; const n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[m][n];
+  }
+
+  function similarityThreshold(a = '', b = '') {
+    const aa = (a || '').toLowerCase().trim();
+    const bb = (b || '').toLowerCase().trim();
+    if (!aa || !bb) return 0;
+    const dist = levenshteinDistance(aa, bb);
+    const maxLen = Math.max(aa.length, bb.length, 1);
+    return Math.max(0, 1 - (dist / maxLen));
+  }
+
+  function includesApprox(haystack = '', needle = '', threshold = 0.8) {
+    const text = (haystack || '').toLowerCase();
+    const target = (needle || '').toLowerCase().trim();
+    if (!text || !target) return false;
+    if (text.includes(target)) return true;
+    const words = text.split(/\s+/).filter(Boolean);
+    const tokenLen = Math.max(1, target.split(/\s+/).length);
+    for (let i = 0; i <= words.length - tokenLen; i++) {
+      const chunk = words.slice(i, i + tokenLen + 1).join(' ');
+      if (similarityThreshold(chunk, target) >= threshold) return true;
+    }
+    return false;
+  }
+
+  function fuzzyContains(haystack = '', patterns = [], threshold = 0.8) {
+    return (patterns || []).some((pattern) => includesApprox(haystack, pattern, threshold));
+  }
+
   function runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg }) {
     const { merged, safeNames } = normalizeScreenshotContext(screenshotText, fileNames);
     const indicators = [];
     const reasons = [];
     const suggestions = [];
-    let risk = 0;
-    const hasKeyword = cfg.keywords.some((k) => merged.includes(k));
-    const hasFileSignal = safeNames.some((name) => cfg.fileSignals.some((signal) => name.toLowerCase().includes(signal)));
-    if (hasKeyword) {
-      indicators.push(`${cfg.tag}:keyword_pattern`);
-      risk += 4;
+    let manipulationScore = 0;
+    let safeScore = 0;
+
+    const hasKeyword = fuzzyContains(merged, cfg.keywords, 0.78);
+    const hasFileSignal = safeNames.some((name) => fuzzyContains(name.toLowerCase(), cfg.fileSignals, 0.85));
+    const suspiciousEditWords = ['edited','edit','mod','fake','clone','copy','temp','preview','compress','reupload','crop'];
+    const normalUiSignals = ['transfer berhasil','nomor referensi','id transaksi','bank penerima','saldo akhir','waktu transaksi'];
+
+    if (hasKeyword) indicators.push(`${cfg.tag}:keyword_pattern`);
+    if (hasFileSignal) indicators.push(`${cfg.tag}:filename_pattern`);
+
+    const suspiciousNameHit = safeNames.some((name) => fuzzyContains(name.toLowerCase(), suspiciousEditWords, 0.84));
+    if (suspiciousNameHit) {
+      indicators.push(`${cfg.tag}:filename_edit_hint`);
+      manipulationScore += 2;
     }
-    if (hasFileSignal) {
-      indicators.push(`${cfg.tag}:filename_pattern`);
-      risk += 3;
+
+    const normalUiMatchCount = normalUiSignals.filter((word) => includesApprox(merged, word, 0.76)).length;
+    const hasReference = fuzzyContains(merged, ['ref','trx','reference','id transaksi','nomor referensi'], 0.76);
+    if (normalUiMatchCount >= 3 && hasReference) {
+      safeScore += 4;
+      indicators.push(`${cfg.tag}:ui_consistent_structure`);
     }
-  const suspiciousEditWords = [
-  "edited",
-  "edit",
-  "mod",
-  "fake",
-  "clone",
-  "copy",
-  "temp",
-  "preview",
-  "compress",
-  "reupload"
-];
-const fakeUiIndicators = [
-  "saldo akhir",
-  "transfer berhasil",
-  "payment successful",
-  "rekening tujuan",
-  "nomor referensi",
-  "id transaksi",
-  "waktu transaksi",
-  "bank penerima"
-];
 
-const matchedUiIndicators = fakeUiIndicators.filter(word =>
-  merged.includes(word)
-);
+    const typoNoise = (merged.match(/[0-9][a-z]|[a-z][0-9]/gi) || []).length;
+    if (hasKeyword && typoNoise >= 8) {
+      manipulationScore += 3;
+      indicators.push(`${cfg.tag}:ocr_noise_heavy`);
+    }
 
-if (
-  matchedUiIndicators.length >= 5 &&
-  !merged.includes("ref") &&
-  !merged.includes("trx") &&
-   !merged.includes("reference")
-) {
-  indicators.push(`${cfg.tag}:fake_ui_structure`);
-
-  risk += 6;
-}
-if (
-  suspiciousEditWords.some(word => merged.includes(word)) &&
-  hasKeyword
-) {
-  indicators.push(`${cfg.tag}:filename_edit_hint`);
-  risk += 4;
-}
-  const suspiciousSuccessWords = [
-  "transfer berhasil",
-  "dana masuk",
-  "payment successful",
-  "transaksi sukses"
-];
-
-const missingTransactionProof =
-  !merged.includes("ref") &&
-  !merged.includes("trx") &&
-  !merged.includes("invoice") &&
-  !merged.includes("id transaksi") &&
-  !merged.includes("transaction id") &&
-  !merged.includes("nomor referensi") &&
-  !merged.includes("reference number");
-
-if (
-  suspiciousSuccessWords.some(word => merged.includes(word)) &&
-  missingTransactionProof
-) {
-  indicators.push(`${cfg.tag}:transaction_format_inconsistency`);
-  risk += 5;
-}
-    if (safeNames.some((name) => !/\.(png|jpg|jpeg|webp)$/i.test(name))) {
+    const metaSuspicion = safeNames.some((name) => !/\.(png|jpg|jpeg|webp)$/i.test(name));
+    if (metaSuspicion) {
+      manipulationScore += 1;
       indicators.push(`${cfg.tag}:metadata_placeholder`);
-      risk += 2;
+      reasons.push('Metadata screenshot tidak lengkap atau berformat tidak umum.');
     }
-    if (hasKeyword && (hasFileSignal || indicators.length >= 3)) {
+
+    if (hasKeyword && normalUiMatchCount < 2 && !hasReference) {
+      manipulationScore += 4;
+      indicators.push(`${cfg.tag}:transaction_context_gap`);
+    }
+
+    const evidenceStrength = Math.min(100, (indicators.length * 14) + (manipulationScore * 7));
+    const confidenceScore = Math.max(10, Math.min(95, evidenceStrength - (safeScore * 10) + (hasKeyword ? 8 : 0)));
+    const riskRaw = Math.max(0, (manipulationScore * 3) + (hasFileSignal ? 2 : 0) - (safeScore * 2));
+
+    if (riskRaw >= 5) {
       reasons.push(cfg.reasonPrimary);
       suggestions.push(cfg.suggestionPrimary);
     }
-    if (indicators.includes(`${cfg.tag}:metadata_placeholder`)) {
-      reasons.push("Metadata screenshot tidak lengkap atau hilang");
+    if (safeScore >= 4) {
+      reasons.push('Beberapa elemen visual dan struktur transaksi terlihat cukup konsisten seperti pola aplikasi resmi.');
+      suggestions.push('Lanjutkan verifikasi ringan seperti cek mutasi asli atau konfirmasi dari kanal resmi.');
     }
-if (
-  indicators.length >= 3 &&
-  hasKeyword
-) {
- indicators.push(`${cfg.tag}:hybrid_detection_triggered`);
-  reasons.push("Terdapat indikasi screenshot kemungkinan telah diedit, dicrop, atau disimpan ulang berkali-kali");
-  suggestions.push(
-    "Bandingkan screenshot dengan tampilan aplikasi resmi atau minta bukti tambahan yang belum dipotong."
-  );
 
-  risk += 4;
-}
-    if (currentScore > 70 && risk > 10) {
-      risk = Math.min(risk, 9);
-    }
-    return { risk: Math.min(cfg.maxPenalty, Math.max(0, risk)), reasons, suggestions, indicators };
+    let risk = Math.min(cfg.maxPenalty, Math.max(0, Math.round(riskRaw + (confidenceScore >= 70 ? 2 : 0))));
+    if (currentScore > 70 && risk > 8) risk = 8;
+
+    return { risk, reasons, suggestions, indicators, confidenceScore, evidenceStrength, manipulationScore, safeScore };
   }
 
   function analyzeFakeTransfer(screenshotText, fileNames, currentScore) { return runScreenshotRuleSet({ screenshotText, fileNames, currentScore, cfg: { tag: 'fake_transfer', maxPenalty: 18, keywords: ['transfer berhasil','transaksi sukses','dana masuk','bukti transfer','brimo','bca mobile','livin','seabank'], fileSignals: ['bca','brimo','livin','seabank','dana','transfer'], reasonPrimary: "Terindikasi struktur tampilan transfer yang tidak konsisten", suggestionPrimary: "Bandingkan bukti transfer dengan aplikasi resmi bank/penerbit sebelum melanjutkan transaksi." } }); }
@@ -3016,7 +3015,7 @@ if (
       reasons = [...new Set(reasons)];
 
       if (totalRisk < 30 && status !== "danger") {
-        reasons.unshift(screenshotMode ? "Tidak cukup indikator untuk menyimpulkan manipulasi" : "Belum cukup indikator untuk memastikan risiko tinggi.");
+        reasons.unshift(screenshotMode ? "Beberapa indikator terdeteksi, namun belum cukup kuat untuk memastikan adanya manipulasi." : "Belum cukup indikator untuk memastikan risiko tinggi.");
       } else if (totalRisk < 40 && status === "warning") {
         reasons.unshift("Masih abu-abu, sebaiknya lakukan verifikasi tambahan.");
       }
