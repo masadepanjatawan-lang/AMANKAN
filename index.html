@@ -3269,7 +3269,7 @@ if (
     const indicators = [];
     const hasOtp = text.includes("otp");
     const hasShortlink = text.includes("bit.ly") || text.includes("tinyurl");
-    const hasTimePressure = ["sekarang","buruan","urgent","hari ini","jangan lama","klik sekarang"].some(k => text.includes(k));
+    const hasTimePressure = ["buruan","urgent","jangan lama","klik sekarang"].some(k => text.includes(k));
     const hasSensitiveAction = ["password","pin","kode verifikasi","login sekarang","verifikasi akun","isi data"].some(k => text.includes(k));
     const hasFinancialPush = ["transfer","deposit","dana cair","rekening"].some(k => text.includes(k));
     const hasEmotionalManipulation = ["tolong bantu","jangan bilang siapa siapa","cuma anda yang bisa bantu","akun akan diblokir"].some(k => text.includes(k));
@@ -3278,7 +3278,7 @@ if (
     if (hasOfficialDomain) indicators.push("Tautan mengarah ke domain resmi yang umum dikenal.");
     if (!hasOtp) indicators.push("Tidak ada permintaan OTP pada konten ini.");
     if (!hasShortlink) indicators.push("Tidak terlihat shortlink yang menyamarkan tujuan tautan.");
-    if (!hasTimePressure) indicators.push("Tidak terlihat tekanan waktu yang mendorong keputusan cepat.");
+  if (!(hasTimePressure && hasSensitiveAction)) indicators.push("Tidak terlihat tekanan waktu yang mendorong keputusan cepat.");
     if (!hasSensitiveAction) indicators.push("Tidak ada ajakan tindakan sensitif seperti pengisian data akun.");
     if (!hasFinancialPush) indicators.push("Tidak ada dorongan transfer atau transaksi finansial langsung.");
     if (!hasEmotionalManipulation) indicators.push("Belum terlihat dorongan emosional yang menekan keputusan.");
