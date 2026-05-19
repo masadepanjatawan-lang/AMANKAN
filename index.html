@@ -2831,9 +2831,16 @@ if (
       const hasLinkSignal = ["klik link", "buka link", "bit.ly", "tinyurl", "tautan"].some(pattern => text.includes(pattern));
       const hasBrandSignal = ["shopee", "tokopedia", "dana"].some(pattern => text.includes(pattern));
       const hasVerificationSignal = ["verifikasi", "verifikasi akun", "kode verifikasi", "konfirmasi akun", "login"].some(pattern => text.includes(pattern));
-      const hasUrgencySignal = ["sebelum hangus", "sekarang", "hari ini", "buruan", "urgent", "jangan lama", "klik sekarang"].some(pattern => text.includes(pattern));
-      const hasSensitiveActionSignal = ["otp", "kode otp", "password", "pin", "transfer", "login", "verifikasi akun", "isi data"].some(pattern => text.includes(pattern));
-
+      const hasUrgencySignal = [
+       "sebelum hangus", 
+      "transfer sekarang",
+       "bayar sekarang",
+       "buruan", 
+       "urgent", 
+       "jangan lama", 
+       "klik sekarang"
+      ].some(pattern => text.includes(pattern));
+     const hasSensitiveActionSignal = ["otp", "kode otp", "password", "pin", "transfer", "login", "verifikasi akun", "isi data"].some(pattern => text.includes(pattern));
       if (hasGiveawaySignal && hasLinkSignal) {
         addRisk(22, "Pesan menggabungkan iming-iming hadiah dengan tautan, pola yang sering dipakai untuk mengarahkan ke situs tidak resmi.");
       }
