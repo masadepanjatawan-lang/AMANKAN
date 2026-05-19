@@ -2316,22 +2316,38 @@ if (
 }
 
 // kombinasi urgency + identitas
+const hasIdentityPressure =
+  text.includes("ktp") ||
+  text.includes("identitas") ||
+  text.includes("jaminan");
+
+const hasUrgencyPressure =
+  text.includes("hari ini") ||
+  text.includes("cepat") ||
+  text.includes("urgent");
+
+const hasSensitiveAction =
+  text.includes("transfer") ||
+  text.includes("otp") ||
+  text.includes("rekening") ||
+  text.includes("verifikasi") ||
+  text.includes("bayar");
+
 if (
-  (
-    text.includes("ktp") ||
-    text.includes("identitas") ||
-    text.includes("jaminan")
-  ) &&
-  (
-    text.includes("hari ini") ||
-    text.includes("cepat") ||
-    text.includes("urgent")
-  )
+  hasIdentityPressure &&
+  hasUrgencyPressure &&
+  hasSensitiveAction
 ) {
-  addRisk(25, "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering");
-  trackCategory("social_engineering", "identitas+urgensi");
+  addRisk(
+    15,
+    "Permintaan identitas disertai tekanan waktu terindikasi — pola social engineering"
+  );
+
+  trackCategory(
+    "social_engineering",
+    "identitas+urgensi"
+  );
 }
- 
       // ─── EXCESSIVE TRUST CLAIM DETECTION ─────────────────────────
       const excessiveTrustPatterns = [
         "100% aman",
