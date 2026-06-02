@@ -3037,7 +3037,7 @@ if (
  
       // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
       if (status === "danger") {
-        await saveLearnedPatterns(input, dangerCount);
+        await const words =(input, dangerCount);
         suggestions = [
           "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
           "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
@@ -3508,10 +3508,28 @@ if (
         return;
       }
  
-    const payload = {
+  const payload = {
+  input: input,
+  type: type,
+
+  result: data.result || null,
+  confidence: data.confidence || null,
+
+  reasons: data.reasons
+    ? JSON.stringify(data.reasons)
+    : null,
+
+  suggestions: data.suggestions
+    ? JSON.stringify(data.suggestions)
+    : null,
+
+  score: data.score || null,
+  singkat: data.singkat || null,
+  status: data.status || null,
+  summary: data.summary || null,
+
   created_at: new Date().toISOString()
 };
- 
       const { error } = await db
         .from("scans")
         .insert([payload]);
