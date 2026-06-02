@@ -1829,12 +1829,6 @@ const quickRisk = quickRiskCheck(screenshotMode ? screenshotText : input);
 }
  
   const text = normalizeTextForAnalysis(screenshotMode ? screenshotText : input);
-      const safeContextFlags = {
-        officialCs: /customer service resmi|cs resmi|layanan pelanggan resmi/.test(text),
-        communityTelegram: /join telegram komunitas|komunitas telegram/.test(text),
-        officialTransfer: /rekening perusahaan resmi|rekening resmi perusahaan/.test(text)
-      };
-
       if (
   screenshotMode &&
   SCREENSHOT_ANALYSIS_ENABLED &&
@@ -2404,19 +2398,6 @@ if (
         }
       });
 
-      if (safeContextFlags.communityTelegram) {
-        applyPenalty(-8);
-        reasons.push("Konteks komunitas Telegram terindikasi normal, sehingga risiko diturunkan.");
-      }
-      if (safeContextFlags.officialCs) {
-        applyPenalty(-10);
-        reasons.push("Penyebutan customer service resmi terindikasi membutuhkan penalti lebih ringan.");
-      }
-      if (safeContextFlags.officialTransfer) {
-        applyPenalty(-10);
-        reasons.push("Transfer ke rekening perusahaan resmi terindikasi perlu verifikasi tambahan, bukan vonis otomatis.");
-      }
- 
       // ─── ROMANCE SCAM DETECTION ─────────────────────────
       const romanceScamPatterns = [
         "sayang percaya aku",
@@ -2952,6 +2933,55 @@ if (
         applyCategoryPenalty(category, weight);
       });
 
+      const officialContextSignals = [
+        "rekening perusahaan resmi",
+        "rekening resmi perusahaan",
+        "customer service resmi",
+        "cs resmi",
+        "layanan pelanggan resmi",
+        "komunitas telegram resmi",
+        "join telegram komunitas",
+        "invoice resmi",
+        "marketplace resmi",
+        "transfer bisnis",
+        "pembayaran bisnis",
+        "rekening bisnis resmi"
+      ];
+      const heavyRiskSignals = [
+        "otp",
+        "kode otp",
+        "password",
+        "kata sandi",
+        "pin akun",
+        "apk",
+        ".apk",
+        "remote access",
+        "akses jarak jauh",
+        "anydesk",
+        "teamviewer",
+        "phishing",
+        "domain palsu",
+        "fake domain",
+        "akun diblokir",
+        "klik link",
+        "buka link",
+        "login ulang"
+      ];
+      const hasOfficialContext = officialContextSignals.some((signal) => text.includes(signal));
+      const hasHeavyRiskSignal = heavyRiskSignals.some((signal) => text.includes(signal)) ||
+        detectedCategories.otp.size > 0 ||
+        detectedCategories.malware.size > 0 ||
+        detectedCategories.remote_access.size > 0 ||
+        detectedCategories.phishing_bank.size > 0 ||
+        detectedCategories.phishing.size > 0;
+
+      if (hasOfficialContext && !hasHeavyRiskSignal) {
+        const contextReduction = Math.min(12, Math.max(6, Math.round(totalRisk * 0.18)));
+        applyPenalty(-contextReduction);
+        reasons.push("Konteks resmi terdeteksi tanpa indikator berat, sehingga penalti dikurangi secara terbatas.");
+      }
+ 
+
       // FIX #7: Normalisasi skor dengan batas minimum lebih realistis (5, bukan 20)
       // Ini mencegah skor hasil selalu 'terlihat aman' meski banyak indikator bahaya
       score = Math.max(5, Math.min(95, score));
@@ -2980,16 +3010,27 @@ if (
         status = "low_risk";
       }
 
-      let confidence;
-      if (isCriticalPattern) {
-        confidence = Math.min(98, Math.max(88, Math.round(100 - score)));
-      } else if (hasSeverity("high")) {
-        confidence = Math.min(90, Math.max(75, Math.round(100 - score)));
-      } else if (hasSeverity("medium")) {
-        confidence = Math.min(75, Math.max(40, Math.round(100 - score)));
-      } else {
-        confidence = Math.min(35, Math.max(10, Math.round(100 - score)));
-      }
+      const calculateEvidenceConfidence = () => {
+        const activeCategories = Object.values(detectedCategories).filter((items) => items.size > 0).length;
+        const activeIndicators = detectedPatterns.size + dangerCount;
+        const uniqueEvidence = new Set([
+          ...Array.from(detectedPatterns),
+          ...rawReasons.map(sanitizeIndicator),
+          ...Object.values(detectedCategories).flatMap((items) => Array.from(items).map(sanitizeIndicator)),
+          ...screenshotRiskFindings.flatMap((finding) => (finding.reasons || []).map(sanitizeIndicator))
+        ].filter(Boolean));
+        const screenshotEvidenceCount = screenshotRiskFindings.filter((finding) => (finding.risk || 0) > 0).length;
+        const severityWeight = isCriticalPattern ? 42 : hasSeverity("high") ? 32 : hasSeverity("medium") ? 22 : hasSeverity("low") ? 12 : 6;
+        const evidenceWeight = Math.min(28, uniqueEvidence.size * 4 + Math.min(8, activeIndicators * 2));
+        const categoryWeight = Math.min(18, activeCategories * 4);
+        const screenshotWeight = screenshotMode ? Math.min(10, screenshotEvidenceCount * 4) : 0;
+        const riskWeight = Math.max(0, Math.min(10, Math.round(totalRisk / 10)));
+        const confidenceRaw = severityWeight + evidenceWeight + categoryWeight + screenshotWeight + riskWeight;
+
+        return Math.max(10, Math.min(98, Math.round(confidenceRaw)));
+      };
+
+      const confidence = calculateEvidenceConfidence();
 
       const toList = (setObj, limit = 3) => Array.from(setObj).map(sanitizeIndicator).filter(Boolean).slice(0, limit).join(", ");
       const pushCategoryReason = (setObj, template) => {
@@ -3037,7 +3078,7 @@ if (
  
       // ─── SARAN BERDASARKAN STATUS ────────────────────────────────────────────
       if (status === "danger") {
-        await saveLearnedPatterns(input, dangerCount);
+        await saveLearnedPatterns(input, dangerCount, totalRisk);
         suggestions = [
           "Jangan klik link atau tombol apapun yang ada dalam pesan ini",
           "Jangan transfer uang atau berikan data pribadi dalam bentuk apapun",
@@ -3432,7 +3473,7 @@ if (
   // FIX #4: Optimalkan saveLearnedPatterns dengan batch upsert
   // Sebelumnya: loop per kata → N request ke DB
   // Sekarang: fetch semua sekaligus, lalu upsert secara batch → jauh lebih efisien
-  async function saveLearnedPatterns(input, dangerCount) {
+  async function saveLearnedPatterns(input, dangerCount, totalRisk) {
     try {
       const STOPWORDS = new Set([
         'kerja', 'online', 'gratis', 'dapat', 'bisa', 'untuk', 'resmi', 'komunitas', 'perusahaan'
@@ -3503,76 +3544,103 @@ if (
  
   async function saveToDatabase(input, type, data) {
     try {
-      if (!input || !data) {
-        console.log("❌ Data tidak valid");
+      const requiredFields = ['status', 'score', 'confidence', 'summary', 'singkat', 'reasons', 'suggestions'];
+      const hasMissingField = requiredFields.some((field) => data?.[field] === undefined || data?.[field] === null);
+
+      if (!input || !type || !data || hasMissingField) {
+        console.log("❌ Data scan tidak valid, insert dibatalkan:", { input: Boolean(input), type, hasMissingField });
         return;
       }
- 
-    const payload = {
-  created_at: new Date().toISOString()
-};
- 
+      if (!Array.isArray(data.reasons) || !Array.isArray(data.suggestions)) {
+        console.log("❌ Data scan tidak valid: reasons/suggestions wajib array");
+        return;
+      }
+
+      const payload = {
+        input: input,
+        type: type,
+        status: data.status,
+        score: data.score,
+        confidence: data.confidence,
+        summary: data.summary,
+        singkat: data.singkat,
+        reasons: JSON.stringify(data.reasons),
+        suggestions: JSON.stringify(data.suggestions),
+        created_at: new Date().toISOString()
+      };
+
       const { error } = await db
         .from("scans")
         .insert([payload]);
- 
+
       if (error) {
-        console.log("❌ Supabase ERROR:", error.message);
-        // PERBAIKAN: Tutup kurung new Error dengan benar
+        console.log("❌ Supabase scans insert error:", error.message, error);
         throw new Error(error.message);
       }
- 
-      console.log("✅ Data berhasil masuk ke Supabase");
+
+      console.log("✅ Data scan berhasil disimpan ke Supabase:", {
+        type: payload.type,
+        status: payload.status,
+        score: payload.score,
+        confidence: payload.confidence
+      });
     } catch (e) {
-      console.log("❌ Exception:", e);
+      console.log("❌ Exception saat menyimpan scan:", e);
       throw e;
     }
   }
- 
-  // FIX #3: Gunakan upsert berdasarkan kolom unik 'date' untuk menghindari race condition
-  // Sebelumnya: select → insert/update terpisah → rentan duplikasi saat akses paralel
-  // Sekarang: upsert sekaligus dengan onConflict → aman dari race condition
+
+  // FIX #3: Visitor tracking harus increment count harian, bukan overwrite ke 1
   async function trackVisitor() {
     try {
       const today = new Date().toISOString().split('T')[0];
- 
-      // Upsert: insert jika belum ada, update count jika sudah ada berdasarkan 'date'
-      // Catatan: kolom 'date' harus memiliki UNIQUE constraint di Supabase
-     const now = new Date();
+      const now = new Date();
+      const day = now.toLocaleDateString('en-US', { weekday: 'long' });
+      const time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-const day = now.toLocaleDateString('en-US', {
-  weekday: 'long'
-});
-
-const time = now.toLocaleTimeString('id-ID', {
-  hour: '2-digit',
-  minute: '2-digit'
-});
-      const { error } = await db
+      const { data: existing, error: fetchError } = await db
         .from('visitors')
-        .upsert(
-       [{
-  date: today,
-  count: 1,
-  day: day,
-  time: time
-}],
-          {
-            onConflict: 'date',        // trigger update jika date sudah ada
-            ignoreDuplicates: false    // tetap jalankan update (bukan ignore)
-          }
-        );
- 
-      if (error) {
-        // Fallback ke metode lama jika upsert tidak didukung (misal constraint belum ada)
-        console.log("upsert visitor failed, fallback:", error);
+        .select('id, count')
+        .eq('date', today)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.log("visitor fetch failed, fallback:", fetchError);
         await trackVisitorFallback(today);
+        return;
       }
+
+      if (existing) {
+        const nextCount = (existing.count || 0) + 1;
+        const { error: updateError } = await db
+          .from('visitors')
+          .update({ count: nextCount, day: day, time: time })
+          .eq('id', existing.id);
+
+        if (updateError) {
+          console.log("visitor update failed, fallback:", updateError);
+          await trackVisitorFallback(today);
+          return;
+        }
+        console.log("✅ Visitor harian bertambah:", { date: today, count: nextCount });
+        return;
+      }
+
+      const { error: insertError } = await db
+        .from('visitors')
+        .insert([{ date: today, count: 1, day: day, time: time }]);
+
+      if (insertError) {
+        console.log("visitor insert failed, fallback:", insertError);
+        await trackVisitorFallback(today);
+        return;
+      }
+      console.log("✅ Visitor harian dibuat:", { date: today, count: 1 });
     } catch (e) {
       console.log("trackVisitor exception:", e);
     }
   }
- 
+
   // FIX #3: Fallback visitor tracking (metode lama) jika upsert gagal
   async function trackVisitorFallback(today) {
     try {
