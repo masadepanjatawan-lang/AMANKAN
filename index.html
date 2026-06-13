@@ -899,7 +899,9 @@
   </button>
 </div>
    <button id="scanAgainBtn" class="scan-again-btn" onclick="resetForm()" style="display:none;">↩ Cek Yang Lain</button>
-    <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
+    <p id="analysisDisclaimer" class="disclaimer" style="display:none;">
+📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.
+</p>
   </div>
  
   <!-- FIX #8: Toast notifikasi ringan untuk error DB -->
@@ -3249,6 +3251,7 @@ if (
     document.getElementById('elyvoFeedbackSection').style.display = 'block';
     document.getElementById('resultCard').style.display = 'block';
    document.getElementById('scanAgainBtn').style.display = 'block';
+   document.getElementById('analysisDisclaimer').style.display = 'block';
     // BUG FIX #5: Ubah block dari 'start' ke 'center' agar tampilan tidak melompat
     // terlalu tinggi pada perangkat mobile — posisi hasil analisa lebih nyaman di tengah layar
     document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3427,7 +3430,7 @@ if (
  document.getElementById('scanAgainBtn').style.display = 'none';
 document.getElementById('elyvoFeedbackSection').style.display = 'none';
 document.getElementById('inputField').value = '';
-
+document.getElementById('analysisDisclaimer').style.display = 'none';
 updateCharCount();
 
 window.scrollTo({
