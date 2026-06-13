@@ -3246,7 +3246,7 @@ if (
     latestResultContext = { input: document.getElementById('inputField').value.trim(), data, mode };
     resetFeedbackUI();
     document.getElementById('feedbackSection').style.display = 'block';
-
+    document.getElementById('elyvoFeedbackSection').style.display = 'block';
     document.getElementById('resultCard').style.display = 'block';
     // BUG FIX #5: Ubah block dari 'start' ke 'center' agar tampilan tidak melompat
     // terlalu tinggi pada perangkat mobile — posisi hasil analisa lebih nyaman di tengah layar
@@ -3423,9 +3423,17 @@ if (
  
   function resetForm() {
     document.getElementById('resultCard').style.display = 'none';
-    document.getElementById('inputField').value = '';
-    updateCharCount();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+document.getElementById('elyvoFeedbackSection').style.display = 'none';
+
+document.getElementById('inputField').value = '';
+
+updateCharCount();
+
+window.scrollTo({
+  top: 0,
+  behavior: 'smooth'
+});
   }
  
   // ─── INIT ─────────────────────────────────────────────────────────────────
