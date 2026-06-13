@@ -898,7 +898,7 @@
     📝 Beri Masukan untuk ELYVO
   </button>
 </div>
-    <button class="scan-again-btn" onclick="resetForm()">↩ Cek Yang Lain</button>
+   <button id="scanAgainBtn" class="scan-again-btn" onclick="resetForm()" style="display:none;">↩ Cek Yang Lain</button>
     <p class="disclaimer">📌 Analisis ini membantu mendeteksi pola risiko digital dan bukan merupakan kepastian mutlak. Tetap lakukan verifikasi tambahan sebelum mengambil keputusan.</p>
   </div>
  
@@ -3248,6 +3248,7 @@ if (
     document.getElementById('feedbackSection').style.display = 'block';
     document.getElementById('elyvoFeedbackSection').style.display = 'block';
     document.getElementById('resultCard').style.display = 'block';
+   document.getElementById('scanAgainBtn').style.display = 'block';
     // BUG FIX #5: Ubah block dari 'start' ke 'center' agar tampilan tidak melompat
     // terlalu tinggi pada perangkat mobile — posisi hasil analisa lebih nyaman di tengah layar
     document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3423,9 +3424,8 @@ if (
  
   function resetForm() {
     document.getElementById('resultCard').style.display = 'none';
-
+ document.getElementById('scanAgainBtn').style.display = 'none';
 document.getElementById('elyvoFeedbackSection').style.display = 'none';
-
 document.getElementById('inputField').value = '';
 
 updateCharCount();
