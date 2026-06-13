@@ -1588,7 +1588,7 @@ async function saveUsage(count) {
  
     // FIX #9: Gunakan inline message pengganti alert() yang blocking
     if (!screenshotMode && !input) {
-     showInlineMessage('⚠️ Masukkan link, chat, dan screenshot yang ingin dicek dulu ya!');
+     showInlineMessage('⚠️ Masukkan link, chat, atau upload screenshot yang ingin dicek dulu ya!');
       return;
     }
     if (screenshotMode && uploadedScreenshots.length === 0) {
