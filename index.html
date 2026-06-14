@@ -2586,7 +2586,15 @@ if (
         "security",
         "account",
         "support account",
-        "security center"
+        "security center",
+        "verifikasi ulang",
+        "aktivitas mencurigakan",
+        "akun dibekukan",
+        "akun bermasalah",
+        "perangkat tidak dikenal",
+        "transaksi ilegal",
+        "pemblokiran permanen",
+        "demi keamanan"
       ];
  
       phishingWords.forEach(word => {
@@ -2853,7 +2861,30 @@ if (
       ) {
         addRisk(20, "Pesan meminta verifikasi akun melalui tautan yang sulit diverifikasi.");
       }
+      if (
+  (
+    text.includes("akun dibekukan") ||
+    text.includes("akun telah dibekukan") ||
+    text.includes("aktivitas mencurigakan") ||
+    text.includes("verifikasi ulang")
+  ) &&
+  (
+    text.includes(".com") ||
+    text.includes("http") ||
+    text.includes("www") ||
+    text.includes("tautan")
+  )
+) {
+  addRisk(
+    40,
+    "Kombinasi ancaman akun dan permintaan verifikasi melalui tautan terindikasi phishing."
+  );
 
+  trackCategory(
+    "phishing",
+    "akun_diblokir_link"
+  );
+}
       const hasGiveawaySignal = ["hadiah", "giveaway", "klaim hadiah", "claim hadiah", "menang hadiah", "iphone gratis", "terpilih"].some(pattern => text.includes(pattern));
       const hasLinkSignal = ["klik link", "buka link", "bit.ly", "tinyurl", "tautan"].some(pattern => text.includes(pattern));
       const hasBrandSignal = ["shopee", "tokopedia", "dana"].some(pattern => text.includes(pattern));
