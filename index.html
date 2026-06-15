@@ -2483,7 +2483,35 @@ if (
         "jangan bilang siapa siapa",
         "rahasia ya"
       ];
- 
+ // ─── IMPERSONATION / BOSS SCAM DETECTION ─────────────────────────
+
+const impersonationPatterns = [
+  "nomor baru saya",
+  "ganti nomor",
+  "saya sedang rapat",
+  "rapat penting",
+  "tidak bisa menerima telepon",
+  "belikan voucher",
+  "voucher digital",
+  "nanti diganti",
+  "bagian keuangan",
+  "tolong bantu segera",
+  "klien mendesak"
+];
+
+impersonationPatterns.forEach(pattern => {
+  if (text.includes(pattern)) {
+    addDanger(
+      `impersonation_${pattern}`,
+      12,
+      `Pola penyamaran identitas terindikasi: "${pattern}"`,
+      {
+        category: "social_engineering",
+        keyword: pattern
+      }
+    );
+  }
+});
       emotionalPressurePatterns.forEach(pattern => {
         if (
           text.includes(pattern) &&
@@ -2822,7 +2850,48 @@ if (
       ) {
         addRisk(35, "Investasi dengan klaim tanpa risiko terindikasi — red flag finansial");
       }
- 
+ // ─── BOSS / FAMILY IMPERSONATION COMBO ─────────────────────────
+
+const hasNewNumber =
+  text.includes("nomor baru saya") ||
+  text.includes("ganti nomor");
+
+const hasUrgentContext =
+  text.includes("rapat penting") ||
+  text.includes("klien mendesak") ||
+  text.includes("segera");
+
+const hasVoucherRequest =
+  text.includes("voucher digital") ||
+  text.includes("belikan voucher");
+
+const hasReimbursement =
+  text.includes("nanti diganti") ||
+  text.includes("bagian keuangan");
+
+if (
+  hasNewNumber &&
+  hasUrgentContext &&
+  (
+    hasVoucherRequest ||
+    hasReimbursement
+  )
+) {
+  addRisk(
+    35,
+    "Pesan menggabungkan identitas baru, urgensi, dan permintaan finansial — pola yang sering muncul pada impersonation scam."
+  );
+
+  trackCategory(
+    "social_engineering",
+    "impersonation_scam"
+  );
+
+  trackCategory(
+    "financial",
+    "voucher_request"
+  );
+}
       // KOMBINASI KHUSUS JOB SCAM
       if (
         text.includes("deposit") &&
