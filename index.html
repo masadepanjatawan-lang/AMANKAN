@@ -2305,7 +2305,7 @@ const identityRequestPatterns = [
 
 identityRequestPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    addDanger(`identity_${pattern}`, 10, "", { category: "identity", keyword: pattern });
+    addDanger(`identity_${pattern}`, 4, "", { category: "identity", keyword: pattern });
   }
 });
 
