@@ -2325,7 +2325,7 @@ const urgencyPatterns = [
 
 urgencyPatterns.forEach(pattern => {
   if (text.includes(pattern)) {
-    addDanger(`urgency_${pattern}`, 8, "", { category: "urgency", keyword: pattern });
+    addDanger(`urgency_${pattern}`, 3, "", { category: "urgency", keyword: pattern });
   }
 });
 
